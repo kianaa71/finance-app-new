@@ -18,6 +18,9 @@ const Dashboard: React.FC = () => {
 
   const netIncome = totalIncome - totalExpense;
 
+  // Menghitung keuntungan all time (sama dengan netIncome tapi dengan label berbeda)
+  const allTimeProfit = totalIncome - totalExpense;
+
   // Data untuk grafik mingguan
   const weeklyData = [
     { name: 'Sen', income: 500000, expense: 300000 },
@@ -59,7 +62,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Kartu Ringkasan */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Pemasukan</CardTitle>
@@ -101,6 +104,21 @@ const Dashboard: React.FC = () => {
             </div>
             <p className="text-xs text-gray-500">
               {netIncome >= 0 ? '+' : '-'}5% dari bulan lalu
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Keuntungan All Time</CardTitle>
+            <span className="text-indigo-600 text-2xl">🏆</span>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${allTimeProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(allTimeProfit)}
+            </div>
+            <p className="text-xs text-gray-500">
+              Total keuntungan keseluruhan
             </p>
           </CardContent>
         </Card>
