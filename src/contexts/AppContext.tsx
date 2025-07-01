@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 export interface User {
@@ -48,63 +47,104 @@ const dummyUsers: User[] = [
 ];
 
 const dummyCategories: Category[] = [
-  { id: '1', name: 'Gaji', type: 'expense' },
-  { id: '2', name: 'Transportasi', type: 'expense' },
-  { id: '3', name: 'Penjualan', type: 'income' },
-  { id: '4', name: 'ATK', type: 'expense' },
-  { id: '5', name: 'Konsultasi', type: 'income' },
+  // Income categories
+  { id: '1', name: 'Penjualan Produk', type: 'income' },
+  { id: '2', name: 'Jasa/Proyek Klien', type: 'income' },
+  { id: '3', name: 'Pendapatan Lain-lain', type: 'income' },
+  
+  // Expense categories
+  { id: '4', name: 'Gaji & Tunjangan', type: 'expense' },
+  { id: '5', name: 'Transportasi & Perjalanan Dinas', type: 'expense' },
+  { id: '6', name: 'Operasional Kantor', type: 'expense' },
+  { id: '7', name: 'Peralatan & Inventaris', type: 'expense' },
+  { id: '8', name: 'Marketing & Iklan', type: 'expense' },
+  { id: '9', name: 'Makan & Konsumsi', type: 'expense' },
+  { id: '10', name: 'Biaya Meeting / Rapat', type: 'expense' },
+  { id: '11', name: 'Pajak & Perizinan', type: 'expense' },
+  { id: '12', name: 'Training & Pengembangan SDM', type: 'expense' },
+  { id: '13', name: 'Biaya Bank & Administrasi', type: 'expense' },
 ];
 
 const dummyTransactions: Transaction[] = [
   {
     id: '1',
     date: '2024-06-25',
-    description: 'Pembelian tinta printer',
-    amount: 250000,
+    description: 'Pembelian printer kantor baru',
+    amount: 2500000,
     type: 'expense',
-    category: 'ATK',
+    category: 'Peralatan & Inventaris',
     employeeName: 'Dina',
     employeeId: '2'
   },
   {
     id: '2',
     date: '2024-06-24',
-    description: 'Penjualan jasa konsultasi',
-    amount: 1250000,
+    description: 'Penjualan jasa konsultasi IT',
+    amount: 15000000,
     type: 'income',
-    category: 'Konsultasi',
+    category: 'Jasa/Proyek Klien',
     employeeName: 'Rizky',
     employeeId: '3'
   },
   {
     id: '3',
     date: '2024-06-23',
-    description: 'Transport ke klien',
-    amount: 150000,
+    description: 'Transport ke klien dan hotel',
+    amount: 850000,
     type: 'expense',
-    category: 'Transportasi',
+    category: 'Transportasi & Perjalanan Dinas',
     employeeName: 'Budi',
     employeeId: '4'
   },
   {
     id: '4',
     date: '2024-06-22',
-    description: 'Penjualan produk',
-    amount: 500000,
+    description: 'Penjualan produk software',
+    amount: 8500000,
     type: 'income',
-    category: 'Penjualan',
+    category: 'Penjualan Produk',
     employeeName: 'Dina',
     employeeId: '2'
   },
   {
     id: '5',
     date: '2024-06-21',
-    description: 'Gaji karyawan Juni',
-    amount: 5000000,
+    description: 'Gaji karyawan Juni 2024',
+    amount: 25000000,
     type: 'expense',
-    category: 'Gaji',
+    category: 'Gaji & Tunjangan',
     employeeName: 'Admin',
     employeeId: '1'
+  },
+  {
+    id: '6',
+    date: '2024-06-20',
+    description: 'Bayar listrik dan internet kantor',
+    amount: 1200000,
+    type: 'expense',
+    category: 'Operasional Kantor',
+    employeeName: 'Admin',
+    employeeId: '1'
+  },
+  {
+    id: '7',
+    date: '2024-06-19',
+    description: 'Iklan Google Ads campaign',
+    amount: 2000000,
+    type: 'expense',
+    category: 'Marketing & Iklan',
+    employeeName: 'Rizky',
+    employeeId: '3'
+  },
+  {
+    id: '8',
+    date: '2024-06-18',
+    description: 'Konsumsi meeting dengan klien',
+    amount: 450000,
+    type: 'expense',
+    category: 'Makan & Konsumsi',
+    employeeName: 'Budi',
+    employeeId: '4'
   }
 ];
 
