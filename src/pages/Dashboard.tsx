@@ -16,7 +16,29 @@ const Dashboard: React.FC = () => {
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const netIncome = totalIncome - totalExpense;
+  // Menghitung keuntungan bersih bulanan (bulan ini)
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  
+  const monthlyIncome = transactions
+    .filter(t => {
+      const transactionDate = new Date(t.date);
+      return t.type === 'income' && 
+             transactionDate.getMonth() === currentMonth && 
+             transactionDate.getFullYear() === currentYear;
+    })
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const monthlyExpense = transactions
+    .filter(t => {
+      const transactionDate = new Date(t.date);
+      return t.type === 'expense' && 
+             transactionDate.getMonth() === currentMonth && 
+             transactionDate.getFullYear() === currentYear;
+    })
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const monthlyNetIncome = monthlyIncome - monthlyExpense;
 
   // Menghitung keuntungan all time (sama dengan netIncome tapi dengan label berbeda)
   const allTimeProfit = totalIncome - totalExpense;
@@ -99,11 +121,11 @@ const Dashboard: React.FC = () => {
             <span className="text-blue-600 text-2xl">📊</span>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(netIncome)}
+            <div className={`text-2xl font-bold ${monthlyNetIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(monthlyNetIncome)}
             </div>
             <p className="text-xs text-gray-500">
-              {netIncome >= 0 ? '+' : '-'}5% dari bulan lalu
+              Keuntungan bulan ini
             </p>
           </CardContent>
         </Card>
