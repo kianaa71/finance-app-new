@@ -33,19 +33,6 @@ const Auth: React.FC = () => {
     }
   }, [user, navigate]);
 
-  // Create admin user if it doesn't exist
-  React.useEffect(() => {
-    const createAdminIfNeeded = async () => {
-      try {
-        await createUser('junichiroalexandra27@gmail.com', 'iwakiwak', 'Junichiro Alexandra', 'admin');
-        console.log('Admin user created or already exists');
-      } catch (error) {
-        console.log('Admin user creation failed or already exists:', error);
-      }
-    };
-    createAdminIfNeeded();
-  }, [createUser]);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
