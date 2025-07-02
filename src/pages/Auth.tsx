@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -39,17 +38,26 @@ const Auth: React.FC = () => {
     setLoading(true);
 
     try {
+      console.log('Attempting login with:', loginData.email);
       const { error } = await signIn(loginData.email, loginData.password);
       
       if (error) {
+        console.error('Login error:', error);
+        let errorMessage = 'Terjadi kesalahan saat login';
+        
+        if (error.message === 'Invalid login credentials') {
+          errorMessage = 'Email atau password salah';
+        } else if (error.message?.includes('Email not confirmed')) {
+          errorMessage = 'Email belum dikonfirmasi';
+        }
+        
         toast({
           title: "Login Gagal",
-          description: error.message === 'Invalid login credentials' 
-            ? 'Email atau password salah' 
-            : error.message,
+          description: errorMessage,
           variant: "destructive"
         });
       } else {
+        console.log('Login successful');
         toast({
           title: "Login Berhasil",
           description: "Selamat datang!",
@@ -57,6 +65,7 @@ const Auth: React.FC = () => {
         navigate('/dashboard');
       }
     } catch (error) {
+      console.error('Login exception:', error);
       toast({
         title: "Error",
         description: "Terjadi kesalahan saat login",
@@ -157,6 +166,14 @@ const Auth: React.FC = () => {
                     {loading ? 'Memproses...' : 'Masuk'}
                   </Button>
                 </form>
+
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm font-medium text-blue-800 mb-2">Akun Test:</p>
+                  <div className="text-xs text-blue-700 space-y-1">
+                    <div><strong>Admin:</strong> admin@financeapp.com / admin123</div>
+                    <div><strong>Employee:</strong> employee@financeapp.com / employee123</div>
+                  </div>
+                </div>
               </TabsContent>
               
               <TabsContent value="signup">
