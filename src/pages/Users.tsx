@@ -34,6 +34,10 @@ const Users: React.FC = () => {
     role: 'employee' as 'admin' | 'employee'
   });
 
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
   // Hanya admin yang bisa mengakses halaman ini
   if (profile?.role !== 'admin') {
     return (
@@ -50,10 +54,6 @@ const Users: React.FC = () => {
       </div>
     );
   }
-
-  useEffect(() => {
-    loadUsers();
-  }, []);
 
   const loadUsers = async () => {
     try {

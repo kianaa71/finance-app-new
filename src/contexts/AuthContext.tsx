@@ -38,36 +38,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Fetching profile for user:', userId);
       
-      // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-      );
-      
-      const profilePromise = supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
 
-      const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
-
       if (error) {
         console.error('Error fetching profile:', error);
-        // If profile doesn't exist, create a basic one
-        if (error.code === 'PGRST116' || error.message?.includes('No rows found')) {
-          console.log('Creating basic profile for user:', userId);
-          const { data: userData } = await supabase.auth.getUser();
-          const basicProfile = {
-            id: userId,
-            name: userData.user?.user_metadata?.name || userData.user?.email?.split('@')[0] || 'User',
-            email: userData.user?.email || '',
-            role: 'employee' as const,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          return basicProfile;
-        }
-        return null;
+        // Return basic profile on error to prevent infinite loading
+        const basicProfile = {
+          id: userId,
+          name: 'User',
+          email: '',
+          role: 'employee' as const,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        return basicProfile;
       }
 
       if (!data) {
@@ -89,7 +77,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return data;
     } catch (error) {
       console.error('Exception while fetching profile:', error);
-      // Return basic profile on error to prevent infinite loading
+      // Return basic profile on any error to prevent crashes
       const basicProfile = {
         id: userId,
         name: 'User',
