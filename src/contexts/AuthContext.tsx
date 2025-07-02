@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface Profile {
   id: string;
   name: string;
+  email: string;
   role: 'admin' | 'employee';
 }
 
@@ -27,6 +28,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchProfile = async (userId: string) => {
+    try {
+      console.log('Fetching profile for user:', userId);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+
+      console.log('Profile fetched successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Exception while fetching profile:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     console.log('Setting up auth state listener...');
     
@@ -38,16 +62,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          console.log('User logged in, creating profile...');
-          // Create profile based on user metadata and email
-          const isAdmin = session.user.email === 'admin@financeapp.com';
-          const basicProfile: Profile = {
-            id: session.user.id,
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-            role: isAdmin ? 'admin' : 'employee'
-          };
-          console.log('Profile created:', basicProfile);
-          setProfile(basicProfile);
+          console.log('User logged in, fetching profile from database...');
+          const userProfile = await fetchProfile(session.user.id);
+          
+          if (userProfile) {
+            setProfile(userProfile);
+            console.log('Profile set successfully:', userProfile);
+          } else {
+            console.log('Profile not found in database');
+            setProfile(null);
+          }
         } else {
           console.log('User logged out, clearing profile...');
           setProfile(null);
@@ -59,18 +83,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Check for existing session
     console.log('Checking for existing session...');
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       console.log('Existing session:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
+      
       if (session?.user) {
-        const isAdmin = session.user.email === 'admin@financeapp.com';
-        const basicProfile: Profile = {
-          id: session.user.id,
-          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-          role: isAdmin ? 'admin' : 'employee'
-        };
-        setProfile(basicProfile);
+        const userProfile = await fetchProfile(session.user.id);
+        if (userProfile) {
+          setProfile(userProfile);
+        }
       }
       setLoading(false);
     });
