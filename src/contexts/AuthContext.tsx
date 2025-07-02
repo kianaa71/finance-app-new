@@ -29,10 +29,29 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  // TESTING MODE: Mock user data
+  const mockUser = {
+    id: 'test-admin-id',
+    email: 'admin@test.com',
+    user_metadata: { name: 'Test Admin' },
+    app_metadata: {},
+    aud: 'authenticated',
+    created_at: new Date().toISOString()
+  } as User;
+
+  const mockProfile = {
+    id: 'test-admin-id',
+    name: 'Test Admin',
+    email: 'admin@test.com',
+    role: 'admin' as const,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  const [user, setUser] = useState<User | null>(mockUser);
+  const [profile, setProfile] = useState<Profile | null>(mockProfile);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -58,52 +77,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
-    console.log('Setting up auth state listener...');
-    
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          console.log('User logged in, fetching profile from database...');
-          const userProfile = await fetchProfile(session.user.id);
-          
-          if (userProfile) {
-            setProfile(userProfile);
-            console.log('Profile set successfully:', userProfile);
-          } else {
-            console.log('Profile not found in database');
-            setProfile(null);
-          }
-        } else {
-          console.log('User logged out, clearing profile...');
-          setProfile(null);
-        }
-        
-        setLoading(false);
-      }
-    );
-
-    // Check for existing session
-    console.log('Checking for existing session...');
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('Existing session:', session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        const userProfile = await fetchProfile(session.user.id);
-        if (userProfile) {
-          setProfile(userProfile);
-        }
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    // TESTING MODE: Skip auth setup
+    console.log('Testing mode: Using mock data');
   }, []);
 
   const signIn = async (email: string, password: string) => {

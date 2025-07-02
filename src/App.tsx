@@ -17,45 +17,17 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Memuat...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-  
+  // TESTING MODE: Skip auth checks
   return <Layout>{children}</Layout>;
 };
 
 const AppRoutes = () => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Memuat...</p>
-        </div>
-      </div>
-    );
-  }
-
+  // TESTING MODE: Skip auth checks
   return (
     <Routes>
       <Route 
         path="/auth" 
-        element={user ? <Navigate to="/dashboard" replace /> : <Auth />} 
+        element={<Auth />} 
       />
       <Route 
         path="/dashboard" 
