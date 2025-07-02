@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 const EmployeeTopbar: React.FC = () => {
-  const { currentUser, setCurrentUser } = useApp();
+  const { profile, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -16,9 +16,9 @@ const EmployeeTopbar: React.FC = () => {
     { path: '/profile', label: 'Profil' },
   ];
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    navigate('/login');
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
   };
 
   return (
@@ -49,11 +49,11 @@ const EmployeeTopbar: React.FC = () => {
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                 <span className="text-green-600 font-semibold text-sm">
-                  {currentUser?.name.charAt(0)}
+                  {profile?.name.charAt(0)}
                 </span>
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-medium text-gray-800">{currentUser?.name}</p>
+                <p className="text-sm font-medium text-gray-800">{profile?.name}</p>
                 <p className="text-xs text-gray-500">Karyawan</p>
               </div>
             </div>

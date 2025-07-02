@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
-import { useApp } from '@/contexts/AppContext';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -8,9 +9,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+
+interface Profile {
+  id: string;
+  name: string;
+  role: 'admin' | 'employee';
+  created_at: string;
+}
 
 const Users: React.FC = () => {
-  const { users, currentUser } = useApp();
+  const { profile } = useAuth();
+  const { toast } = useToast();
+  const [users, setUsers] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -19,7 +31,7 @@ const Users: React.FC = () => {
   });
 
   // Hanya admin yang bisa mengakses halaman ini
-  if (currentUser?.role !== 'admin') {
+  if (profile?.role !== 'admin') {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="w-full max-w-md">
@@ -35,31 +47,70 @@ const Users: React.FC = () => {
     );
   }
 
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat data pengguna",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Fitur tambah pengguna akan segera tersedia!');
+    toast({
+      title: "Info",
+      description: "Fitur tambah pengguna akan segera tersedia!",
+    });
     setIsDialogOpen(false);
     setFormData({ name: '', email: '', role: 'employee' });
   };
 
   const handleDelete = (userId: string) => {
-    if (userId === currentUser?.id) {
-      alert('Anda tidak dapat menghapus akun sendiri!');
+    if (userId === profile?.id) {
+      toast({
+        title: "Error",
+        description: "Anda tidak dapat menghapus akun sendiri!",
+        variant: "destructive"
+      });
       return;
     }
-    if (window.confirm('Apakah Anda yakin ingin menghapus pengguna ini?')) {
-      alert('Fitur hapus pengguna akan segera tersedia!');
-    }
+    
+    toast({
+      title: "Info",
+      description: "Fitur hapus pengguna akan segera tersedia!",
+    });
   };
 
-  const getUserStats = (userId: string) => {
-    const { transactions } = useApp();
-    const userTransactions = transactions.filter(t => t.employeeId === userId);
-    return {
-      totalTransactions: userTransactions.length,
-      totalAmount: userTransactions.reduce((sum, t) => sum + t.amount, 0)
-    };
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Memuat data pengguna...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -134,87 +185,73 @@ const Users: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {users.map((user) => {
-          const stats = getUserStats(user.id);
-          return (
-            <Card key={user.id}>
-              <CardHeader>
-                <div className="flex items-center space-x-4">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${
-                    user.role === 'admin' ? 'bg-blue-500' : 'bg-green-500'
-                  }`}>
-                    {user.name.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{user.name}</CardTitle>
-                    <CardDescription>{user.email}</CardDescription>
-                  </div>
+        {users.map((user) => (
+          <Card key={user.id}>
+            <CardHeader>
+              <div className="flex items-center space-x-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${
+                  user.role === 'admin' ? 'bg-blue-500' : 'bg-green-500'
+                }`}>
+                  {user.name.charAt(0)}
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Role:</span>
-                    <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                      {user.role === 'admin' ? 'Administrator' : 'Karyawan'}
-                    </Badge>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Status:</span>
-                    <Badge variant="outline" className="text-green-600 border-green-600">
-                      Aktif
-                    </Badge>
-                  </div>
+                <div className="flex-1">
+                  <CardTitle className="text-lg">{user.name}</CardTitle>
+                  <CardDescription>ID: {user.id.slice(0, 8)}...</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Role:</span>
+                  <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                    {user.role === 'admin' ? 'Administrator' : 'Karyawan'}
+                  </Badge>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Status:</span>
+                  <Badge variant="outline" className="text-green-600 border-green-600">
+                    Aktif
+                  </Badge>
+                </div>
 
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Bergabung:</span>
+                  <span className="text-sm text-gray-500">
+                    {new Date(user.created_at).toLocaleDateString('id-ID')}
+                  </span>
+                </div>
+
+                {user.id !== profile?.id && (
                   <div className="pt-4 border-t">
-                    <div className="grid grid-cols-2 gap-4 text-center">
-                      <div>
-                        <p className="text-2xl font-bold text-blue-600">{stats.totalTransactions}</p>
-                        <p className="text-xs text-gray-500">Transaksi</p>
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-green-600">
-                          {new Intl.NumberFormat('id-ID', {
-                            notation: 'compact',
-                            compactDisplay: 'short'
-                          }).format(stats.totalAmount)}
-                        </p>
-                        <p className="text-xs text-gray-500">Total Nilai</p>
-                      </div>
+                    <div className="flex space-x-2">
+                      <Button size="sm" variant="outline" className="flex-1">
+                        Edit
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive" 
+                        className="flex-1"
+                        onClick={() => handleDelete(user.id)}
+                      >
+                        Hapus
+                      </Button>
                     </div>
                   </div>
+                )}
 
-                  {user.id !== currentUser?.id && (
-                    <div className="pt-4 border-t">
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" className="flex-1">
-                          Edit
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="destructive" 
-                          className="flex-1"
-                          onClick={() => handleDelete(user.id)}
-                        >
-                          Hapus
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {user.id === currentUser?.id && (
-                    <div className="pt-4 border-t">
-                      <Badge variant="outline" className="w-full justify-center">
-                        Akun Anda
-                      </Badge>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                {user.id === profile?.id && (
+                  <div className="pt-4 border-t">
+                    <Badge variant="outline" className="w-full justify-center">
+                      Akun Anda
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );
