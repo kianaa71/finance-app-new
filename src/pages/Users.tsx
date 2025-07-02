@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -14,19 +13,24 @@ import { useToast } from '@/hooks/use-toast';
 interface Profile {
   id: string;
   name: string;
+  email: string;
   role: 'admin' | 'employee';
   created_at: string;
+  updated_at: string;
 }
 
 const Users: React.FC = () => {
-  const { profile } = useAuth();
+  const { profile, createUser, updateUser, deleteUser, fetchUsers } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    password: '',
     role: 'employee' as 'admin' | 'employee'
   });
 
@@ -48,16 +52,13 @@ const Users: React.FC = () => {
   }
 
   useEffect(() => {
-    fetchUsers();
+    loadUsers();
   }, []);
 
-  const fetchUsers = async () => {
+  const loadUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      const { data, error } = await fetchUsers();
+      
       if (error) {
         throw error;
       }
@@ -75,17 +76,81 @@ const Users: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Info",
-      description: "Fitur tambah pengguna akan segera tersedia!",
-    });
-    setIsDialogOpen(false);
-    setFormData({ name: '', email: '', role: 'employee' });
+    setLoading(true);
+
+    try {
+      const { error } = await createUser(
+        formData.email,
+        formData.password,
+        formData.name,
+        formData.role
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Berhasil",
+        description: "Pengguna baru berhasil ditambahkan",
+      });
+
+      setIsAddDialogOpen(false);
+      setFormData({ name: '', email: '', password: '', role: 'employee' });
+      await loadUsers(); // Refresh list
+    } catch (error: any) {
+      console.error('Add user error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Gagal menambahkan pengguna",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (userId: string) => {
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    setLoading(true);
+
+    try {
+      const { error } = await updateUser(
+        editingUser.id,
+        formData.name,
+        formData.role
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Berhasil",
+        description: "Data pengguna berhasil diperbarui",
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingUser(null);
+      setFormData({ name: '', email: '', password: '', role: 'employee' });
+      await loadUsers(); // Refresh list
+    } catch (error: any) {
+      console.error('Edit user error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Gagal memperbarui pengguna",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
     if (userId === profile?.id) {
       toast({
         title: "Error",
@@ -94,14 +159,50 @@ const Users: React.FC = () => {
       });
       return;
     }
-    
-    toast({
-      title: "Info",
-      description: "Fitur hapus pengguna akan segera tersedia!",
-    });
+
+    if (!confirm('Apakah Anda yakin ingin menghapus pengguna ini?')) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await deleteUser(userId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Berhasil",
+        description: "Pengguna berhasil dihapus",
+      });
+
+      await loadUsers(); // Refresh list
+    } catch (error: any) {
+      console.error('Delete user error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Gagal menghapus pengguna",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (loading) {
+  const openEditDialog = (user: Profile) => {
+    setEditingUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      password: '',
+      role: user.role
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  if (loading && users.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -120,7 +221,7 @@ const Users: React.FC = () => {
           <p className="text-gray-600">Kelola akun pengguna sistem</p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>Tambah Pengguna</Button>
           </DialogTrigger>
@@ -131,11 +232,11 @@ const Users: React.FC = () => {
                 Masukkan informasi pengguna baru
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleAddUser} className="space-y-4">
               <div>
-                <Label htmlFor="name">Nama Lengkap</Label>
+                <Label htmlFor="add-name">Nama Lengkap</Label>
                 <Input
-                  id="name"
+                  id="add-name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Masukkan nama lengkap"
@@ -144,9 +245,9 @@ const Users: React.FC = () => {
               </div>
               
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="add-email">Email</Label>
                 <Input
-                  id="email"
+                  id="add-email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -156,7 +257,20 @@ const Users: React.FC = () => {
               </div>
 
               <div>
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="add-password">Password</Label>
+                <Input
+                  id="add-password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Masukkan password"
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="add-role">Role</Label>
                 <Select 
                   value={formData.role} 
                   onValueChange={(value: 'admin' | 'employee') => setFormData({ ...formData, role: value })}
@@ -172,17 +286,78 @@ const Users: React.FC = () => {
               </div>
 
               <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                   Batal
                 </Button>
-                <Button type="submit">
-                  Tambah Pengguna
+                <Button type="submit" disabled={loading}>
+                  {loading ? 'Menyimpan...' : 'Tambah Pengguna'}
                 </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Pengguna</DialogTitle>
+            <DialogDescription>
+              Perbarui informasi pengguna
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditUser} className="space-y-4">
+            <div>
+              <Label htmlFor="edit-name">Nama Lengkap</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Masukkan nama lengkap"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={formData.email}
+                disabled
+                className="bg-gray-100"
+              />
+              <p className="text-xs text-gray-500 mt-1">Email tidak dapat diubah</p>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-role">Role</Label>
+              <Select 
+                value={formData.role} 
+                onValueChange={(value: 'admin' | 'employee') => setFormData({ ...formData, role: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="employee">Karyawan</SelectItem>
+                  <SelectItem value="admin">Administrator</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {users.map((user) => (
@@ -196,7 +371,7 @@ const Users: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <CardTitle className="text-lg">{user.name}</CardTitle>
-                  <CardDescription>ID: {user.id.slice(0, 8)}...</CardDescription>
+                  <CardDescription>{user.email}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -226,14 +401,19 @@ const Users: React.FC = () => {
                 {user.id !== profile?.id && (
                   <div className="pt-4 border-t">
                     <div className="flex space-x-2">
-                      <Button size="sm" variant="outline" className="flex-1">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => openEditDialog(user)}
+                      >
                         Edit
                       </Button>
                       <Button 
                         size="sm" 
                         variant="destructive" 
                         className="flex-1"
-                        onClick={() => handleDelete(user.id)}
+                        onClick={() => handleDeleteUser(user.id)}
                       >
                         Hapus
                       </Button>
@@ -253,6 +433,13 @@ const Users: React.FC = () => {
           </Card>
         ))}
       </div>
+
+      {users.length === 0 && !loading && (
+        <div className="text-center py-12">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Belum ada pengguna</h3>
+          <p className="text-gray-600">Tambahkan pengguna pertama untuk memulai.</p>
+        </div>
+      )}
     </div>
   );
 };

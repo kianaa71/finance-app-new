@@ -89,21 +89,45 @@ const Auth: React.FC = () => {
       return;
     }
 
+    if (signupData.password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password harus minimal 6 karakter",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
       const { error } = await signUp(signupData.email, signupData.password, signupData.name);
       
       if (error) {
+        let errorMessage = error.message;
+        
+        if (error.message?.includes('already registered')) {
+          errorMessage = 'Email sudah terdaftar';
+        } else if (error.message?.includes('Password should be')) {
+          errorMessage = 'Password terlalu lemah';
+        }
+        
         toast({
           title: "Registrasi Gagal",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive"
         });
       } else {
         toast({
           title: "Registrasi Berhasil",
-          description: "Silakan cek email untuk konfirmasi akun",
+          description: "Akun berhasil dibuat. Silakan login.",
+        });
+        // Reset form
+        setSignupData({
+          name: '',
+          email: '',
+          password: '',
+          confirmPassword: ''
         });
       }
     } catch (error) {
@@ -172,7 +196,6 @@ const Auth: React.FC = () => {
                   <p className="text-sm font-medium text-blue-800 mb-2">Akun Test:</p>
                   <div className="text-xs text-blue-700 space-y-1">
                     <div><strong>Admin:</strong> admin@financeapp.com / admin123</div>
-                    <div><strong>Employee:</strong> employee@financeapp.com / employee123</div>
                   </div>
                 </div>
               </TabsContent>
@@ -206,10 +229,11 @@ const Auth: React.FC = () => {
                     <Input
                       id="signup-password"
                       type="password"
-                      placeholder="Password"
+                      placeholder="Password (minimal 6 karakter)"
                       value={signupData.password}
                       onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
                       required
+                      minLength={6}
                     />
                   </div>
                   <div>

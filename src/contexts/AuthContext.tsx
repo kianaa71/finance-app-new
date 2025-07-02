@@ -8,6 +8,8 @@ interface Profile {
   name: string;
   email: string;
   role: 'admin' | 'employee';
+  created_at: string;
+  updated_at: string;
 }
 
 interface AuthContextType {
@@ -18,6 +20,10 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  createUser: (email: string, password: string, name: string, role: 'admin' | 'employee') => Promise<{ error: any }>;
+  updateUser: (userId: string, name: string, role: 'admin' | 'employee') => Promise<{ error: any }>;
+  deleteUser: (userId: string) => Promise<{ error: any }>;
+  fetchUsers: () => Promise<{ data: Profile[] | null; error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -148,6 +154,113 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setSession(null);
   };
 
+  const createUser = async (email: string, password: string, name: string, role: 'admin' | 'employee') => {
+    try {
+      console.log('Creating new user:', { email, name, role });
+      
+      // Admin creates new user via auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name }
+        }
+      });
+
+      if (authError) {
+        console.error('Auth error:', authError);
+        return { error: authError };
+      }
+
+      if (authData.user) {
+        // Update the profile with the correct role
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            name,
+            role,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', authData.user.id);
+
+        if (profileError) {
+          console.error('Profile update error:', profileError);
+          return { error: profileError };
+        }
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Create user exception:', error);
+      return { error };
+    }
+  };
+
+  const updateUser = async (userId: string, name: string, role: 'admin' | 'employee') => {
+    try {
+      console.log('Updating user:', { userId, name, role });
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name,
+          role,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Update user error:', error);
+      }
+
+      return { error };
+    } catch (error) {
+      console.error('Update user exception:', error);
+      return { error };
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    try {
+      console.log('Deleting user:', userId);
+      
+      // Delete from profiles first (will cascade to auth.users)
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Delete user error:', error);
+      }
+
+      return { error };
+    } catch (error) {
+      console.error('Delete user exception:', error);
+      return { error };
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      console.log('Fetching all users...');
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Fetch users error:', error);
+      }
+
+      return { data, error };
+    } catch (error) {
+      console.error('Fetch users exception:', error);
+      return { data: null, error };
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -156,7 +269,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       loading,
       signIn,
       signUp,
-      signOut
+      signOut,
+      createUser,
+      updateUser,
+      deleteUser,
+      fetchUsers
     }}>
       {children}
     </AuthContext.Provider>
