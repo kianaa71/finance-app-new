@@ -38,28 +38,67 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Fetching profile for user:', userId);
       
-      const { data, error } = await supabase
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+      );
+      
+      const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
 
+      const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
+
       if (error) {
         console.error('Error fetching profile:', error);
-        console.error('Error details:', error.message, error.code);
+        // If profile doesn't exist, create a basic one
+        if (error.code === 'PGRST116' || error.message?.includes('No rows found')) {
+          console.log('Creating basic profile for user:', userId);
+          const { data: userData } = await supabase.auth.getUser();
+          const basicProfile = {
+            id: userId,
+            name: userData.user?.user_metadata?.name || userData.user?.email?.split('@')[0] || 'User',
+            email: userData.user?.email || '',
+            role: 'employee' as const,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          return basicProfile;
+        }
         return null;
       }
 
       if (!data) {
         console.log('No profile found for user:', userId);
-        return null;
+        // Create basic profile if none exists
+        const { data: userData } = await supabase.auth.getUser();
+        const basicProfile = {
+          id: userId,
+          name: userData.user?.user_metadata?.name || userData.user?.email?.split('@')[0] || 'User',
+          email: userData.user?.email || '',
+          role: 'employee' as const,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        return basicProfile;
       }
 
       console.log('Profile fetched successfully:', data);
       return data;
     } catch (error) {
       console.error('Exception while fetching profile:', error);
-      return null;
+      // Return basic profile on error to prevent infinite loading
+      const basicProfile = {
+        id: userId,
+        name: 'User',
+        email: '',
+        role: 'employee' as const,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      return basicProfile;
     }
   };
 
