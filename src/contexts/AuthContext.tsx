@@ -36,18 +36,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile
-          setTimeout(async () => {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-            
-            if (profileData) {
-              setProfile(profileData);
-            }
-          }, 0);
+          // Create a basic profile from user data for now
+          // This will be replaced once the types are updated
+          const basicProfile: Profile = {
+            id: session.user.id,
+            name: session.user.user_metadata?.name || session.user.email || 'User',
+            role: 'employee' // Default role
+          };
+          setProfile(basicProfile);
         } else {
           setProfile(null);
         }
@@ -60,6 +56,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        const basicProfile: Profile = {
+          id: session.user.id,
+          name: session.user.user_metadata?.name || session.user.email || 'User',
+          role: 'employee'
+        };
+        setProfile(basicProfile);
+      }
       setLoading(false);
     });
 
