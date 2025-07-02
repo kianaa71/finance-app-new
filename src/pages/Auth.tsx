@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -7,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import AdminSetup from '@/components/AdminSetup';
 
 const Auth: React.FC = () => {
   const { signIn, signUp, user } = useAuth();
@@ -134,10 +134,9 @@ const Auth: React.FC = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Masuk</TabsTrigger>
                 <TabsTrigger value="signup">Daftar</TabsTrigger>
-                <TabsTrigger value="setup">Setup</TabsTrigger>
               </TabsList>
               
               <TabsContent value="login">
@@ -228,10 +227,6 @@ const Auth: React.FC = () => {
                     {loading ? 'Memproses...' : 'Daftar'}
                   </Button>
                 </form>
-              </TabsContent>
-
-              <TabsContent value="setup">
-                <AdminSetup />
               </TabsContent>
             </Tabs>
           </CardContent>
