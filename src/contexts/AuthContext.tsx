@@ -228,7 +228,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Creating user:', { email, name, role });
       
-      // Use regular signup instead of admin.createUser
+      // Store current admin session before creating user
+      const currentSession = session;
+      
+      // Use regular signup to create user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -242,9 +245,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { error };
       }
 
-      // Update role in profiles table if user was created
-      if (data.user) {
-        // Wait a bit for the trigger to create the profile
+      // Immediately restore admin session after user creation
+      if (currentSession && data.user) {
+        console.log('Restoring admin session...');
+        
+        // Sign out the newly created user
+        await supabase.auth.signOut();
+        
+        // Restore the admin session
+        await supabase.auth.setSession({
+          access_token: currentSession.access_token,
+          refresh_token: currentSession.refresh_token
+        });
+
+        // Update role in profiles table after restoring session
         setTimeout(async () => {
           const { error: profileError } = await supabase
             .from('profiles')
