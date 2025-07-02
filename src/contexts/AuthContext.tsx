@@ -8,6 +8,7 @@ interface Profile {
   name: string;
   email: string;
   role: 'admin' | 'employee';
+  status?: string;
   created_at: string;
   updated_at: string;
 }
@@ -326,20 +327,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const deleteUser = async (userId: string) => {
     try {
-      console.log('Deleting user:', userId);
+      console.log('Deactivating user:', userId);
       
-      // Delete user via Supabase Auth Admin
-      const { error } = await supabase.auth.admin.deleteUser(userId);
+      // Soft delete: update status to inactive instead of actually deleting
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          status: 'inactive',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
 
       if (error) {
-        console.error('Delete user error:', error);
+        console.error('Deactivate user error:', error);
         return { error };
       }
 
-      console.log('User deleted successfully');
+      console.log('User deactivated successfully');
       return { error: null };
     } catch (error) {
-      console.error('Delete user exception:', error);
+      console.error('Deactivate user exception:', error);
       return { error };
     }
   };

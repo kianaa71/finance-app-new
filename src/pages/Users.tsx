@@ -15,6 +15,7 @@ interface Profile {
   name: string;
   email: string;
   role: 'admin' | 'employee';
+  status?: string;
   created_at: string;
   updated_at: string;
 }
@@ -176,7 +177,7 @@ const Users: React.FC = () => {
 
       toast({
         title: "Berhasil",
-        description: "Pengguna berhasil dihapus",
+        description: "Pengguna berhasil dinonaktifkan",
       });
 
       await loadUsers(); // Refresh list
@@ -387,8 +388,11 @@ const Users: React.FC = () => {
                 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Status:</span>
-                  <Badge variant="outline" className="text-green-600 border-green-600">
-                    Aktif
+                  <Badge 
+                    variant="outline" 
+                    className={user.status === 'inactive' ? 'text-red-600 border-red-600' : 'text-green-600 border-green-600'}
+                  >
+                    {user.status === 'inactive' ? 'Nonaktif' : 'Aktif'}
                   </Badge>
                 </div>
 
@@ -410,13 +414,13 @@ const Users: React.FC = () => {
                       >
                         Edit
                       </Button>
-                      <Button 
+                       <Button 
                         size="sm" 
                         variant="destructive" 
                         className="flex-1"
                         onClick={() => handleDeleteUser(user.id)}
                       >
-                        Hapus
+                        {user.status === 'inactive' ? 'Nonaktif' : 'Nonaktifkan'}
                       </Button>
                     </div>
                   </div>
