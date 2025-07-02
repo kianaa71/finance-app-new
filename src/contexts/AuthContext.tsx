@@ -42,51 +42,51 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle();
+        .single();
 
       if (error) {
         console.error('Error fetching profile:', error);
-        // Return basic profile on error to prevent infinite loading
-        const basicProfile = {
-          id: userId,
-          name: 'User',
-          email: '',
-          role: 'employee' as const,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        return basicProfile;
-      }
-
-      if (!data) {
-        console.log('No profile found for user:', userId);
-        // Create basic profile if none exists
-        const { data: userData } = await supabase.auth.getUser();
-        const basicProfile = {
-          id: userId,
-          name: userData.user?.user_metadata?.name || userData.user?.email?.split('@')[0] || 'User',
-          email: userData.user?.email || '',
-          role: 'employee' as const,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        return basicProfile;
+        
+        // If no profile exists, create a default one
+        if (error.code === 'PGRST116') {
+          console.log('Creating default profile...');
+          const { data: userData } = await supabase.auth.getUser();
+          const defaultProfile = {
+            id: userId,
+            name: userData.user?.user_metadata?.name || userData.user?.email?.split('@')[0] || 'User',
+            email: userData.user?.email || '',
+            role: userData.user?.email === 'junichiroalexandra27@gmail.com' ? 'admin' as const : 'employee' as const,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          
+          // Try to insert the profile
+          try {
+            const { data: newProfile, error: insertError } = await supabase
+              .from('profiles')
+              .insert([defaultProfile])
+              .select()
+              .single();
+              
+            if (!insertError && newProfile) {
+              console.log('Default profile created successfully:', newProfile);
+              return newProfile;
+            }
+          } catch (insertErr) {
+            console.error('Failed to create profile:', insertErr);
+          }
+          
+          return defaultProfile;
+        }
+        
+        return null;
       }
 
       console.log('Profile fetched successfully:', data);
       return data;
     } catch (error) {
       console.error('Exception while fetching profile:', error);
-      // Return basic profile on any error to prevent crashes
-      const basicProfile = {
-        id: userId,
-        name: 'User',
-        email: '',
-        role: 'employee' as const,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      return basicProfile;
+      return null;
     }
   };
 
@@ -100,23 +100,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user) {
+        if (session?.user && event === 'SIGNED_IN') {
           console.log('User logged in, fetching profile from database...');
-          const userProfile = await fetchProfile(session.user.id);
           
-          if (userProfile) {
-            setProfile(userProfile);
-            console.log('Profile set successfully:', userProfile);
-          } else {
-            console.log('Profile not found in database');
-            setProfile(null);
-          }
+          // Use setTimeout to prevent blocking
+          setTimeout(async () => {
+            try {
+              const userProfile = await fetchProfile(session.user.id);
+              setProfile(userProfile);
+              setLoading(false);
+            } catch (error) {
+              console.error('Error fetching profile:', error);
+              setProfile(null);
+              setLoading(false);
+            }
+          }, 100);
         } else {
           console.log('User logged out, clearing profile...');
           setProfile(null);
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
@@ -128,11 +131,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        const userProfile = await fetchProfile(session.user.id);
-        if (userProfile) {
+        try {
+          const userProfile = await fetchProfile(session.user.id);
           setProfile(userProfile);
+        } catch (error) {
+          console.error('Error fetching profile:', error);
+          setProfile(null);
         }
       }
+      setLoading(false);
+    }).catch((error) => {
+      console.error('Session check error:', error);
       setLoading(false);
     });
 

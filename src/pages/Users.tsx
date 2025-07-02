@@ -57,6 +57,7 @@ const Users: React.FC = () => {
 
   const loadUsers = async () => {
     try {
+      setLoading(true);
       const { data, error } = await fetchUsers();
       
       if (error) {
