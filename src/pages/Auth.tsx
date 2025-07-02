@@ -33,24 +33,6 @@ const Auth: React.FC = () => {
     }
   }, [user, navigate]);
 
-  // Create admin user if it doesn't exist
-  React.useEffect(() => {
-    const createAdminIfNeeded = async () => {
-      try {
-        console.log('Creating admin user...');
-        const { error } = await createUser('junichiroalexandra27@gmail.com', 'iwakiwak', 'Junichiro Alexandra', 'admin');
-        if (error) {
-          console.log('Admin user creation error:', error);
-        } else {
-          console.log('Admin user created successfully');
-        }
-      } catch (error) {
-        console.log('Admin user creation failed:', error);
-      }
-    };
-    createAdminIfNeeded();
-  }, [createUser]);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -178,9 +160,10 @@ const Auth: React.FC = () => {
                 </form>
 
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm font-medium text-blue-800 mb-2">Akun Test:</p>
+                  <p className="text-sm font-medium text-blue-800 mb-2">Cara menggunakan:</p>
                   <div className="text-xs text-blue-700 space-y-1">
-                    <div><strong>Admin:</strong> junichiroalexandra27@gmail.com / iwakiwak</div>
+                    <div>1. Daftar akun baru terlebih dahulu</div>
+                    <div>2. Login dengan akun yang sudah dibuat</div>
                   </div>
                 </div>
               </TabsContent>

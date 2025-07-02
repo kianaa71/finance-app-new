@@ -183,12 +183,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Creating user:', { email, name, role });
       
-      // Create user via Supabase Auth
-      const { data, error } = await supabase.auth.admin.createUser({
+      // Use regular signup instead of admin.createUser
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        user_metadata: { name },
-        email_confirm: true
+        options: {
+          data: { name }
+        }
       });
 
       if (error) {
@@ -196,17 +197,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { error };
       }
 
-      // Update user profile with role
+      // Update role in profiles table if user was created
       if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ role, name })
-          .eq('id', data.user.id);
+        // Wait a bit for the trigger to create the profile
+        setTimeout(async () => {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ role, name })
+            .eq('id', data.user.id);
 
-        if (profileError) {
-          console.error('Update profile error:', profileError);
-          return { error: profileError };
-        }
+          if (profileError) {
+            console.error('Update profile error:', profileError);
+          }
+        }, 1000);
       }
 
       console.log('User created successfully:', data.user?.email);
