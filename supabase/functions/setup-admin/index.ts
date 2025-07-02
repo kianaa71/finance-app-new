@@ -19,6 +19,11 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
+    console.log('🔍 Environment check:', { 
+      hasUrl: !!supabaseUrl, 
+      hasKey: !!serviceRoleKey 
+    });
+    
     // Create admin client with service role key
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
@@ -29,14 +34,14 @@ serve(async (req) => {
 
     // Check if admin user already exists
     console.log('🔍 Checking if admin user already exists...');
-    const { data: existingUser, error: checkError } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
     
-    if (checkError) {
-      console.error('❌ Error checking existing users:', checkError);
-      throw checkError;
+    if (listError) {
+      console.error('❌ Error listing users:', listError);
+      throw new Error(`Failed to check existing users: ${listError.message}`);
     }
 
-    const adminExists = existingUser.users.some(user => user.email === 'admin@financeapp.com');
+    const adminExists = existingUsers.users.some(user => user.email === 'admin@financeapp.com');
     
     if (adminExists) {
       console.log('⚠️ Admin user already exists');
@@ -53,7 +58,7 @@ serve(async (req) => {
     }
 
     // Create admin user
-    console.log('📝 Creating admin user in auth.users...');
+    console.log('📝 Creating admin user...');
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: 'admin@financeapp.com',
       password: 'admin123',
@@ -65,13 +70,16 @@ serve(async (req) => {
 
     if (authError) {
       console.error('❌ Error creating user:', authError);
-      throw authError;
+      throw new Error(`Failed to create user: ${authError.message}`);
     }
 
     console.log('✅ User created successfully:', authData.user.email);
 
-    // Create profile
-    console.log('📝 Creating profile in public.profiles...');
+    // Wait a moment for user creation to fully process
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Create profile with explicit role casting
+    console.log('📝 Creating profile...');
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from('profiles')
       .insert([
@@ -86,24 +94,19 @@ serve(async (req) => {
 
     if (profileError) {
       console.error('❌ Error creating profile:', profileError);
-      throw profileError;
+      
+      // If profile creation fails, clean up the user
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+        console.log('🧹 Cleaned up user after profile creation failure');
+      } catch (cleanupError) {
+        console.error('❌ Failed to cleanup user:', cleanupError);
+      }
+      
+      throw new Error(`Failed to create profile: ${profileError.message}`);
     }
 
     console.log('✅ Profile created successfully:', profileData);
-
-    // Test login to verify everything works
-    console.log('🔍 Testing login...');
-    const { data: loginData, error: loginError } = await supabaseAdmin.auth.signInWithPassword({
-      email: 'admin@financeapp.com',
-      password: 'admin123'
-    });
-
-    if (loginError) {
-      console.error('⚠️ Login test failed:', loginError);
-      // Don't throw here, user creation was successful
-    } else {
-      console.log('✅ Login test successful');
-    }
 
     return new Response(
       JSON.stringify({

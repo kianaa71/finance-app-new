@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, AlertCircle, Settings } from 'lucide-react';
+import { CheckCircle, AlertCircle, Settings, Loader2 } from 'lucide-react';
 
 const AdminSetup: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -21,12 +21,17 @@ const AdminSetup: React.FC = () => {
         body: {}
       });
 
+      console.log('📡 Function response:', { data, error });
+
       if (error) {
         console.error('❌ Function error:', error);
-        throw error;
+        toast({
+          title: "Setup Gagal",
+          description: `Error: ${error.message}`,
+          variant: "destructive"
+        });
+        return;
       }
-
-      console.log('✅ Function response:', data);
 
       if (data?.success) {
         setSuccess(true);
@@ -113,7 +118,14 @@ const AdminSetup: React.FC = () => {
           className="w-full"
           size="lg"
         >
-          {loading ? 'Sedang Setup...' : 'Setup Admin User'}
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Sedang Setup...
+            </>
+          ) : (
+            'Setup Admin User'
+          )}
         </Button>
 
         <p className="text-xs text-gray-500 text-center">
