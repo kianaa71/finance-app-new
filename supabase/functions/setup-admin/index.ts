@@ -16,13 +16,30 @@ serve(async (req) => {
   try {
     console.log('🚀 Starting admin setup...');
     
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     console.log('🔍 Environment check:', { 
       hasUrl: !!supabaseUrl, 
-      hasKey: !!serviceRoleKey 
+      hasKey: !!serviceRoleKey,
+      urlValue: supabaseUrl ? 'set' : 'missing',
+      keyLength: serviceRoleKey ? serviceRoleKey.length : 0
     });
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('❌ Missing environment variables');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Server configuration error: Missing environment variables',
+          error: 'SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not found'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
     
     // Create admin client with service role key
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
@@ -32,13 +49,47 @@ serve(async (req) => {
       }
     });
 
+    // Test connection first
+    console.log('🔍 Testing database connection...');
+    const { data: testData, error: testError } = await supabaseAdmin
+      .from('profiles')
+      .select('count')
+      .limit(1);
+    
+    if (testError) {
+      console.error('❌ Database connection test failed:', testError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Database connection failed',
+          error: testError.message
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    console.log('✅ Database connection successful');
+
     // Check if admin user already exists
     console.log('🔍 Checking if admin user already exists...');
     const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (listError) {
       console.error('❌ Error listing users:', listError);
-      throw new Error(`Failed to check existing users: ${listError.message}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Gagal mengecek existing users',
+          error: listError.message
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
     }
 
     const adminExists = existingUsers.users.some(user => user.email === 'admin@financeapp.com');
@@ -70,7 +121,17 @@ serve(async (req) => {
 
     if (authError) {
       console.error('❌ Error creating user:', authError);
-      throw new Error(`Failed to create user: ${authError.message}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Gagal membuat admin user',
+          error: authError.message
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
     }
 
     console.log('✅ User created successfully:', authData.user.email);
@@ -78,7 +139,7 @@ serve(async (req) => {
     // Wait a moment for user creation to fully process
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Create profile with explicit role casting
+    // Create profile
     console.log('📝 Creating profile...');
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -103,7 +164,17 @@ serve(async (req) => {
         console.error('❌ Failed to cleanup user:', cleanupError);
       }
       
-      throw new Error(`Failed to create profile: ${profileError.message}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Gagal membuat profile admin',
+          error: profileError.message
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
     }
 
     console.log('✅ Profile created successfully:', profileData);
