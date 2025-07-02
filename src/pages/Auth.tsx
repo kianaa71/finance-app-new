@@ -162,7 +162,7 @@ const Auth: React.FC = () => {
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                   <p className="text-sm font-medium text-blue-800 mb-2">Akun Test:</p>
                   <div className="text-xs text-blue-700 space-y-1">
-                    <div><strong>Admin:</strong> admin@financeapp.com / admin123</div>
+                    <div><strong>Admin:</strong> junichiroalexandra27@gmail.com / iwakiwak</div>
                   </div>
                 </div>
               </TabsContent>
