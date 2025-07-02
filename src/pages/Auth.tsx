@@ -1,20 +1,112 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 
 const Auth: React.FC = () => {
-  const { user } = useAuth();
+  const { user, signIn, signUp, loading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  // Redirect jika sudah login (dalam mode testing, user selalu ada)
+  const [loginData, setLoginData] = useState({
+    email: '',
+    password: ''
+  });
+
+  const [signupData, setSignupData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+
+  // Redirect jika sudah login
   React.useEffect(() => {
     if (user) {
       navigate('/dashboard');
     }
   }, [user, navigate]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const { error } = await signIn(loginData.email, loginData.password);
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Login gagal",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Berhasil",
+        description: "Login berhasil! Mengalihkan ke dashboard...",
+      });
+
+      // Navigate akan terjadi otomatis via useEffect karena user state berubah
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Terjadi kesalahan saat login",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (signupData.password !== signupData.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Password dan konfirmasi password tidak cocok",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await signUp(signupData.email, signupData.password, signupData.name);
+      
+      if (error) {
+        toast({
+          title: "Error", 
+          description: error.message || "Registrasi gagal",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Berhasil",
+        description: "Registrasi berhasil! Silakan cek email untuk konfirmasi.",
+      });
+
+      // Reset form
+      setSignupData({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Terjadi kesalahan saat registrasi",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -26,27 +118,12 @@ const Auth: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Mode Testing</CardTitle>
+            <CardTitle>Selamat Datang</CardTitle>
             <CardDescription>
-              Halaman login/register sementara dinonaktifkan untuk testing
+              Masuk ke akun Anda atau daftar untuk memulai
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-              <p className="text-sm text-yellow-800 font-medium mb-2">🚧 Mode Testing Aktif</p>
-              <p className="text-xs text-yellow-700 mb-3">
-                Sistem autentikasi sementara dinonaktifkan. Anda akan otomatis login sebagai Administrator untuk menguji fitur-fitur website.
-              </p>
-              <Button 
-                onClick={() => navigate('/dashboard')} 
-                className="w-full"
-              >
-                Masuk ke Dashboard (Test Mode)
-              </Button>
-            </div>
-
-            {/* COMMENTED OUT - Login/Register Forms */}
-            {/*
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Masuk</TabsTrigger>
@@ -143,7 +220,6 @@ const Auth: React.FC = () => {
                 </form>
               </TabsContent>
             </Tabs>
-            */}
           </CardContent>
         </Card>
       </div>
