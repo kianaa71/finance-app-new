@@ -1,43 +1,108 @@
-
 import React, { useState } from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 const Profile: React.FC = () => {
-  const { currentUser } = useApp();
+  const { profile, updateUser } = useAuth();
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: currentUser?.name || '',
-    email: currentUser?.email || '',
+    name: profile?.name || '',
+    email: profile?.email || '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulasi save
-    alert('Profil berhasil diperbarui!');
-    setIsEditing(false);
+    if (!profile) return;
+
+    setLoading(true);
+    try {
+      const { error } = await updateUser(profile.id, formData.name, profile.role);
+      
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Berhasil",
+        description: "Profil berhasil diperbarui",
+      });
+      
+      setIsEditing(false);
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Gagal memperbarui profil",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (formData.newPassword !== formData.confirmPassword) {
-      alert('Password baru dan konfirmasi password tidak cocok!');
+      toast({
+        title: "Error",
+        description: "Password baru dan konfirmasi password tidak cocok!",
+        variant: "destructive"
+      });
       return;
     }
-    alert('Password berhasil diubah!');
-    setFormData({
-      ...formData,
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    });
+
+    if (formData.newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password baru minimal 6 karakter!",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: formData.newPassword
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Berhasil",
+        description: "Password berhasil diubah",
+      });
+
+      setFormData({
+        ...formData,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error: any) {
+      console.error('Error updating password:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Gagal mengubah password",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -75,9 +140,10 @@ const Profile: React.FC = () => {
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      disabled={!isEditing}
+                      disabled={true}
+                      className="bg-gray-100"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Email tidak dapat diubah</p>
                   </div>
                 </div>
 
@@ -91,12 +157,15 @@ const Profile: React.FC = () => {
                       <Button 
                         type="button" 
                         variant="outline" 
-                        onClick={() => setIsEditing(false)}
+                        onClick={() => {
+                          setIsEditing(false);
+                          setFormData({ ...formData, name: profile?.name || '' });
+                        }}
                       >
                         Batal
                       </Button>
-                      <Button type="submit">
-                        Simpan Perubahan
+                      <Button type="submit" disabled={loading}>
+                        {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                       </Button>
                     </>
                   )}
@@ -114,16 +183,6 @@ const Profile: React.FC = () => {
             </CardHeader>
             <CardContent>
               <form onSubmit={handlePasswordChange} className="space-y-4">
-                <div>
-                  <Label htmlFor="current-password">Password Saat Ini</Label>
-                  <Input
-                    id="current-password"
-                    type="password"
-                    value={formData.currentPassword}
-                    onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
-                    placeholder="Masukkan password saat ini"
-                  />
-                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="new-password">Password Baru</Label>
@@ -133,6 +192,7 @@ const Profile: React.FC = () => {
                       value={formData.newPassword}
                       onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
                       placeholder="Masukkan password baru"
+                      minLength={6}
                     />
                   </div>
                   <div>
@@ -143,12 +203,13 @@ const Profile: React.FC = () => {
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                       placeholder="Konfirmasi password baru"
+                      minLength={6}
                     />
                   </div>
                 </div>
                 <div className="flex justify-end">
-                  <Button type="submit">
-                    Update Password
+                  <Button type="submit" disabled={loading}>
+                    {loading ? 'Mengubah...' : 'Update Password'}
                   </Button>
                 </div>
               </form>
@@ -166,26 +227,26 @@ const Profile: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center space-x-4">
                   <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl ${
-                    currentUser?.role === 'admin' ? 'bg-blue-500' : 'bg-green-500'
+                    profile?.role === 'admin' ? 'bg-blue-500' : 'bg-green-500'
                   }`}>
-                    {currentUser?.name.charAt(0)}
+                    {profile?.name.charAt(0)}
                   </div>
                   <div>
-                    <p className="font-semibold text-lg">{currentUser?.name}</p>
-                    <p className="text-gray-600">{currentUser?.email}</p>
+                    <p className="font-semibold text-lg">{profile?.name}</p>
+                    <p className="text-gray-600">{profile?.email}</p>
                   </div>
                 </div>
                 
                 <div className="pt-4 border-t">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gray-600">Role:</span>
-                    <Badge variant={currentUser?.role === 'admin' ? 'default' : 'secondary'}>
-                      {currentUser?.role === 'admin' ? 'Administrator' : 'Karyawan'}
+                    <Badge variant={profile?.role === 'admin' ? 'default' : 'secondary'}>
+                      {profile?.role === 'admin' ? 'Administrator' : 'Karyawan'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gray-600">User ID:</span>
-                    <span className="text-sm font-mono">{currentUser?.id}</span>
+                    <span className="text-sm font-mono text-xs">{profile?.id}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Status:</span>
@@ -207,7 +268,7 @@ const Profile: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {currentUser?.role === 'admin' ? (
+                {profile?.role === 'admin' ? (
                   <>
                     <div className="flex items-center space-x-2">
                       <span className="text-green-500 text-lg">✅</span>

@@ -1,15 +1,67 @@
-
-import React, { useState } from 'react';
-import { useApp } from '@/contexts/AppContext';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
+interface Transaction {
+  id: string;
+  description: string;
+  amount: number;
+  type: 'income' | 'expense';
+  date: string;
+  category_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  type: string;
+}
+
 const Reports: React.FC = () => {
-  const { transactions } = useApp();
+  const { profile } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filterPeriod, setFilterPeriod] = useState('monthly');
+
+  useEffect(() => {
+    if (profile) {
+      loadData();
+    }
+  }, [profile]);
+
+  const loadData = async () => {
+    try {
+      // Load transactions
+      const { data: transactionData, error: transactionError } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (transactionError) throw transactionError;
+
+      // Load categories
+      const { data: categoryData, error: categoryError } = await supabase
+        .from('categories')
+        .select('*');
+
+      if (categoryError) throw categoryError;
+
+      setTransactions((transactionData || []) as Transaction[]);
+      setCategories(categoryData || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -33,11 +85,11 @@ const Reports: React.FC = () => {
 
     const income = filteredTransactions
       .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + Number(t.amount), 0);
 
     const expense = filteredTransactions
       .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + Number(t.amount), 0);
 
     return { income, expense, net: income - expense, count: filteredTransactions.length };
   };
@@ -46,38 +98,55 @@ const Reports: React.FC = () => {
 
   // Data untuk grafik kategori
   const categoryData = transactions.reduce((acc: any, transaction) => {
-    const existing = acc.find((item: any) => item.category === transaction.category);
+    const category = categories.find(c => c.id === transaction.category_id);
+    const categoryName = category?.name || 'Tidak diketahui';
+    
+    const existing = acc.find((item: any) => item.category === categoryName);
     if (existing) {
-      existing.amount += transaction.amount;
+      existing.amount += Number(transaction.amount);
     } else {
       acc.push({
-        category: transaction.category,
-        amount: transaction.amount,
+        category: categoryName,
+        amount: Number(transaction.amount),
         type: transaction.type
       });
     }
     return acc;
   }, []);
 
-  // Data untuk grafik pemasukan vs pengeluaran per kategori
-  const chartData = categoryData.map((item: any) => ({
-    name: item.category,
-    amount: item.amount,
-    type: item.type
-  }));
-
   // Warna untuk pie chart
   const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
-  // Data untuk grafik bulanan (dummy data untuk demo)
-  const monthlyData = [
-    { month: 'Jan', income: 5000000, expense: 3200000 },
-    { month: 'Feb', income: 4800000, expense: 3500000 },
-    { month: 'Mar', income: 6200000, expense: 4100000 },
-    { month: 'Apr', income: 5500000, expense: 3800000 },
-    { month: 'Mei', income: 6800000, expense: 4200000 },
-    { month: 'Jun', income: 7200000, expense: 4500000 },
-  ];
+  // Data untuk grafik bulanan (berdasarkan 6 bulan terakhir)
+  const getMonthlyData = () => {
+    const monthlyData = [];
+    const now = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+      const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = month.toLocaleDateString('id-ID', { month: 'short' });
+      
+      const monthTransactions = transactions.filter(t => {
+        const transactionDate = new Date(t.date);
+        return transactionDate.getMonth() === month.getMonth() && 
+               transactionDate.getFullYear() === month.getFullYear();
+      });
+      
+      const income = monthTransactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+      
+      const expense = monthTransactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+      
+      monthlyData.push({ month: monthName, income, expense });
+    }
+    
+    return monthlyData;
+  };
+
+  const monthlyData = getMonthlyData();
 
   const handleExportPDF = () => {
     alert('Fitur export PDF akan segera tersedia!');
@@ -86,6 +155,17 @@ const Reports: React.FC = () => {
   const handleExportExcel = () => {
     alert('Fitur export Excel akan segera tersedia!');
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Memuat laporan...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -256,30 +336,42 @@ const Reports: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {categoryData.map((item: any, index: number) => {
-                  const transactionCount = transactions.filter(t => t.category === item.category).length;
-                  const average = item.amount / transactionCount;
-                  
-                  return (
-                    <tr key={index} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium">{item.category}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant={item.type === 'income' ? 'default' : 'secondary'}>
-                          {item.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`font-semibold ${
-                          item.type === 'income' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {formatCurrency(item.amount)}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">{transactionCount}</td>
-                      <td className="py-3 px-4">{formatCurrency(average)}</td>
-                    </tr>
-                  );
-                })}
+                {categoryData.length > 0 ? (
+                  categoryData.map((item: any, index: number) => {
+                    const category = categories.find(c => c.name === item.category);
+                    const transactionCount = transactions.filter(t => {
+                      const transactionCategory = categories.find(c => c.id === t.category_id);
+                      return transactionCategory?.name === item.category;
+                    }).length;
+                    const average = transactionCount > 0 ? item.amount / transactionCount : 0;
+                    
+                    return (
+                      <tr key={index} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-4 font-medium">{item.category}</td>
+                        <td className="py-3 px-4">
+                          <Badge variant={item.type === 'income' ? 'default' : 'secondary'}>
+                            {item.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`font-semibold ${
+                            item.type === 'income' ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {formatCurrency(item.amount)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">{transactionCount}</td>
+                        <td className="py-3 px-4">{formatCurrency(average)}</td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-gray-500">
+                      Belum ada data untuk ditampilkan
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

@@ -1,20 +1,83 @@
-
-import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
+interface Transaction {
+  id: string;
+  description: string;
+  amount: number;
+  type: 'income' | 'expense';
+  date: string;
+  category_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  type: string;
+}
+
 const Dashboard: React.FC = () => {
-  const { transactions, currentUser } = useApp();
+  const { profile } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (profile) {
+      loadDashboardData();
+    }
+  }, [profile]);
+
+  const loadDashboardData = async () => {
+    try {
+      // Load transactions
+      const { data: transactionData, error: transactionError } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (transactionError) throw transactionError;
+
+      // Load categories
+      const { data: categoryData, error: categoryError } = await supabase
+        .from('categories')
+        .select('*');
+
+      if (categoryError) throw categoryError;
+
+      setTransactions((transactionData || []) as Transaction[]);
+      setCategories(categoryData || []);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Memuat data dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Menghitung total pemasukan dan pengeluaran
   const totalIncome = transactions
     .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const totalExpense = transactions
     .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount), 0);
 
   // Menghitung keuntungan bersih bulanan (bulan ini)
   const currentMonth = new Date().getMonth();
@@ -27,7 +90,7 @@ const Dashboard: React.FC = () => {
              transactionDate.getMonth() === currentMonth && 
              transactionDate.getFullYear() === currentYear;
     })
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const monthlyExpense = transactions
     .filter(t => {
@@ -36,14 +99,12 @@ const Dashboard: React.FC = () => {
              transactionDate.getMonth() === currentMonth && 
              transactionDate.getFullYear() === currentYear;
     })
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const monthlyNetIncome = monthlyIncome - monthlyExpense;
-
-  // Menghitung keuntungan all time (sama dengan netIncome tapi dengan label berbeda)
   const allTimeProfit = totalIncome - totalExpense;
 
-  // Data untuk grafik mingguan
+  // Data untuk grafik mingguan (sample data)
   const weeklyData = [
     { name: 'Sen', income: 500000, expense: 300000 },
     { name: 'Sel', income: 800000, expense: 450000 },
@@ -64,12 +125,17 @@ const Dashboard: React.FC = () => {
     }).format(amount);
   };
 
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find(c => c.id === categoryId);
+    return category?.name || 'Tidak diketahui';
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Selamat datang kembali, {currentUser?.name}!</p>
+          <p className="text-gray-600">Selamat datang kembali, {profile?.name}!</p>
         </div>
         <div className="text-right">
           <p className="text-sm text-gray-500">
@@ -95,7 +161,7 @@ const Dashboard: React.FC = () => {
               {formatCurrency(totalIncome)}
             </div>
             <p className="text-xs text-gray-500">
-              +12% dari bulan lalu
+              Semua waktu
             </p>
           </CardContent>
         </Card>
@@ -110,14 +176,14 @@ const Dashboard: React.FC = () => {
               {formatCurrency(totalExpense)}
             </div>
             <p className="text-xs text-gray-500">
-              +8% dari bulan lalu
+              Semua waktu
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Keuntungan Bersih</CardTitle>
+            <CardTitle className="text-sm font-medium">Keuntungan Bulan Ini</CardTitle>
             <span className="text-blue-600 text-2xl">📊</span>
           </CardHeader>
           <CardContent>
@@ -125,14 +191,14 @@ const Dashboard: React.FC = () => {
               {formatCurrency(monthlyNetIncome)}
             </div>
             <p className="text-xs text-gray-500">
-              Keuntungan bulan ini
+              {new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Keuntungan All Time</CardTitle>
+            <CardTitle className="text-sm font-medium">Keuntungan Total</CardTitle>
             <span className="text-indigo-600 text-2xl">🏆</span>
           </CardHeader>
           <CardContent>
@@ -140,7 +206,7 @@ const Dashboard: React.FC = () => {
               {formatCurrency(allTimeProfit)}
             </div>
             <p className="text-xs text-gray-500">
-              Total keuntungan keseluruhan
+              Keseluruhan waktu
             </p>
           </CardContent>
         </Card>
@@ -158,7 +224,7 @@ const Dashboard: React.FC = () => {
               {transactions.length}
             </div>
             <p className="text-xs text-gray-500">
-              {transactions.filter(t => t.date === new Date().toISOString().split('T')[0]).length} hari ini
+              Semua transaksi tercatat
             </p>
           </CardContent>
         </Card>
@@ -218,36 +284,40 @@ const Dashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentTransactions.map((transaction) => (
-              <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    transaction.type === 'income' ? 'bg-green-100' : 'bg-red-100'
-                  }`}>
-                    <span className={`text-lg ${
-                      transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+            {recentTransactions.length > 0 ? (
+              recentTransactions.map((transaction) => (
+                <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      transaction.type === 'income' ? 'bg-green-100' : 'bg-red-100'
                     }`}>
-                      {transaction.type === 'income' ? '💰' : '💸'}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{transaction.description}</p>
-                    <div className="flex items-center space-x-2 text-sm text-gray-500">
-                      <span>{transaction.category}</span>
-                      <span>•</span>
-                      <span>{transaction.employeeName}</span>
-                      <span>•</span>
-                      <span>{new Date(transaction.date).toLocaleDateString('id-ID')}</span>
+                      <span className={`text-lg ${
+                        transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {transaction.type === 'income' ? '💰' : '💸'}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{transaction.description}</p>
+                      <div className="flex items-center space-x-2 text-sm text-gray-500">
+                        <span>{getCategoryName(transaction.category_id)}</span>
+                        <span>•</span>
+                        <span>{new Date(transaction.date).toLocaleDateString('id-ID')}</span>
+                      </div>
                     </div>
                   </div>
+                  <div className={`text-lg font-semibold ${
+                    transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Number(transaction.amount))}
+                  </div>
                 </div>
-                <div className={`text-lg font-semibold ${
-                  transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Belum ada transaksi yang dicatat</p>
               </div>
-            ))}
+            )}
           </div>
         </CardContent>
       </Card>
