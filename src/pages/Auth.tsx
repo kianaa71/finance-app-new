@@ -1,145 +1,20 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
 
 const Auth: React.FC = () => {
-  const { signIn, signUp, user } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
 
-  // Redirect if already logged in
+  // Redirect jika sudah login (dalam mode testing, user selalu ada)
   React.useEffect(() => {
     if (user) {
       navigate('/dashboard');
     }
   }, [user, navigate]);
-
-  const [loginData, setLoginData] = useState({
-    email: '',
-    password: ''
-  });
-
-  const [signupData, setSignupData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  });
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      console.log('Attempting login with:', loginData.email);
-      const { error } = await signIn(loginData.email, loginData.password);
-      
-      if (error) {
-        console.error('Login error:', error);
-        let errorMessage = 'Terjadi kesalahan saat login';
-        
-        if (error.message === 'Invalid login credentials') {
-          errorMessage = 'Email atau password salah';
-        } else if (error.message?.includes('Email not confirmed')) {
-          errorMessage = 'Email belum dikonfirmasi';
-        }
-        
-        toast({
-          title: "Login Gagal",
-          description: errorMessage,
-          variant: "destructive"
-        });
-      } else {
-        console.log('Login successful');
-        toast({
-          title: "Login Berhasil",
-          description: "Selamat datang!",
-        });
-        navigate('/dashboard');
-      }
-    } catch (error) {
-      console.error('Login exception:', error);
-      toast({
-        title: "Error",
-        description: "Terjadi kesalahan saat login",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (signupData.password !== signupData.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Password dan konfirmasi password tidak cocok",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (signupData.password.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password harus minimal 6 karakter",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const { error } = await signUp(signupData.email, signupData.password, signupData.name);
-      
-      if (error) {
-        let errorMessage = error.message;
-        
-        if (error.message?.includes('already registered')) {
-          errorMessage = 'Email sudah terdaftar';
-        } else if (error.message?.includes('Password should be')) {
-          errorMessage = 'Password terlalu lemah';
-        }
-        
-        toast({
-          title: "Registrasi Gagal",
-          description: errorMessage,
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Registrasi Berhasil",
-          description: "Akun berhasil dibuat. Silakan login.",
-        });
-        // Reset form
-        setSignupData({
-          name: '',
-          email: '',
-          password: '',
-          confirmPassword: ''
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Terjadi kesalahan saat registrasi",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -151,12 +26,27 @@ const Auth: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Akses Sistem</CardTitle>
+            <CardTitle>Mode Testing</CardTitle>
             <CardDescription>
-              Masuk atau daftar untuk mengakses aplikasi
+              Halaman login/register sementara dinonaktifkan untuk testing
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+              <p className="text-sm text-yellow-800 font-medium mb-2">🚧 Mode Testing Aktif</p>
+              <p className="text-xs text-yellow-700 mb-3">
+                Sistem autentikasi sementara dinonaktifkan. Anda akan otomatis login sebagai Administrator untuk menguji fitur-fitur website.
+              </p>
+              <Button 
+                onClick={() => navigate('/dashboard')} 
+                className="w-full"
+              >
+                Masuk ke Dashboard (Test Mode)
+              </Button>
+            </div>
+
+            {/* COMMENTED OUT - Login/Register Forms */}
+            {/*
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Masuk</TabsTrigger>
@@ -253,6 +143,7 @@ const Auth: React.FC = () => {
                 </form>
               </TabsContent>
             </Tabs>
+            */}
           </CardContent>
         </Card>
       </div>

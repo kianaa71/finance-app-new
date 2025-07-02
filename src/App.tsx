@@ -19,6 +19,7 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   
+  // Dalam mode testing, loading selalu false dan user selalu ada
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -30,9 +31,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   
+  // COMMENTED OUT - Redirect ke auth jika tidak login
+  // Dalam mode testing, user selalu ada (mock data)
+  /*
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
+  */
   
   return <Layout>{children}</Layout>;
 };
@@ -55,7 +60,7 @@ const AppRoutes = () => {
     <Routes>
       <Route 
         path="/auth" 
-        element={user ? <Navigate to="/dashboard" replace /> : <Auth />} 
+        element={<Auth />} 
       />
       <Route 
         path="/dashboard" 

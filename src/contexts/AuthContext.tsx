@@ -29,11 +29,44 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  // TEMPORARY: Mock user dan profile untuk testing tanpa login
+  const mockUser: User = {
+    id: 'mock-admin-id',
+    email: 'admin@financeapp.com',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    app_metadata: {},
+    user_metadata: {},
+    aud: 'authenticated',
+    role: 'authenticated'
+  } as User;
 
+  const mockProfile: Profile = {
+    id: 'mock-admin-id',
+    name: 'Administrator (Test Mode)',
+    email: 'admin@financeapp.com',
+    role: 'admin',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  const mockSession: Session = {
+    access_token: 'mock-token',
+    refresh_token: 'mock-refresh',
+    expires_in: 3600,
+    expires_at: Date.now() + 3600000,
+    token_type: 'bearer',
+    user: mockUser
+  };
+
+  // Set mock data sebagai default
+  const [user, setUser] = useState<User | null>(mockUser);
+  const [profile, setProfile] = useState<Profile | null>(mockProfile);
+  const [session, setSession] = useState<Session | null>(mockSession);
+  const [loading, setLoading] = useState(false); // Set false agar tidak ada loading
+
+  // Comment out real auth logic untuk sementara
+  /*
   const fetchProfile = async (userId: string) => {
     try {
       console.log('Fetching profile for user:', userId);
@@ -105,158 +138,96 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return () => subscription.unsubscribe();
   }, []);
+  */
 
+  // Mock functions untuk testing
   const signIn = async (email: string, password: string) => {
-    console.log('Attempting to sign in with:', email);
-    
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      console.log('Sign in response:', { data: data?.user?.email, error });
-      
-      if (error) {
-        console.error('Sign in error:', error);
-      }
-      
-      return { error };
-    } catch (err) {
-      console.error('Sign in exception:', err);
-      return { error: err };
-    }
+    console.log('Mock signIn called with:', email);
+    // Return success untuk testing
+    return { error: null };
   };
 
   const signUp = async (email: string, password: string, name: string) => {
-    console.log('Attempting to sign up with:', email);
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-        data: {
-          name: name
-        }
-      }
-    });
-    
-    console.log('Sign up response:', { error });
-    return { error };
+    console.log('Mock signUp called with:', email, name);
+    return { error: null };
   };
 
   const signOut = async () => {
-    console.log('Signing out...');
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-    setSession(null);
+    console.log('Mock signOut called');
+    // Tidak melakukan apa-apa untuk testing
   };
 
   const createUser = async (email: string, password: string, name: string, role: 'admin' | 'employee') => {
     try {
-      console.log('Creating new user:', { email, name, role });
+      console.log('Mock createUser called:', { email, name, role });
       
-      // Admin creates new user via auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { name }
-        }
-      });
-
-      if (authError) {
-        console.error('Auth error:', authError);
-        return { error: authError };
-      }
-
-      if (authData.user) {
-        // Update the profile with the correct role
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            name,
-            role,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', authData.user.id);
-
-        if (profileError) {
-          console.error('Profile update error:', profileError);
-          return { error: profileError };
-        }
-      }
-
+      // Mock success response
       return { error: null };
     } catch (error) {
-      console.error('Create user exception:', error);
+      console.error('Mock createUser error:', error);
       return { error };
     }
   };
 
   const updateUser = async (userId: string, name: string, role: 'admin' | 'employee') => {
     try {
-      console.log('Updating user:', { userId, name, role });
+      console.log('Mock updateUser called:', { userId, name, role });
       
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          name,
-          role,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-
-      if (error) {
-        console.error('Update user error:', error);
-      }
-
-      return { error };
+      // Mock success response
+      return { error: null };
     } catch (error) {
-      console.error('Update user exception:', error);
+      console.error('Mock updateUser error:', error);
       return { error };
     }
   };
 
   const deleteUser = async (userId: string) => {
     try {
-      console.log('Deleting user:', userId);
+      console.log('Mock deleteUser called:', userId);
       
-      // Delete from profiles first (will cascade to auth.users)
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId);
-
-      if (error) {
-        console.error('Delete user error:', error);
-      }
-
-      return { error };
+      // Mock success response
+      return { error: null };
     } catch (error) {
-      console.error('Delete user exception:', error);
+      console.error('Mock deleteUser error:', error);
       return { error };
     }
   };
 
   const fetchUsers = async () => {
     try {
-      console.log('Fetching all users...');
+      console.log('Mock fetchUsers called');
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Return mock users data
+      const mockUsers: Profile[] = [
+        {
+          id: 'mock-admin-id',
+          name: 'Administrator (Test Mode)',
+          email: 'admin@financeapp.com',
+          role: 'admin',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 'mock-employee-1',
+          name: 'John Doe (Test)',
+          email: 'john@financeapp.com',
+          role: 'employee',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 'mock-employee-2',
+          name: 'Jane Smith (Test)',
+          email: 'jane@financeapp.com',
+          role: 'employee',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
 
-      if (error) {
-        console.error('Fetch users error:', error);
-      }
-
-      return { data, error };
+      return { data: mockUsers, error: null };
     } catch (error) {
-      console.error('Fetch users exception:', error);
+      console.error('Mock fetchUsers error:', error);
       return { data: null, error };
     }
   };
