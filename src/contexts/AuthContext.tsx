@@ -93,31 +93,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     console.log('Setting up auth state listener...');
     
+    let loadingTimeout: NodeJS.Timeout;
+    
+    // Set loading timeout as fallback
+    loadingTimeout = setTimeout(() => {
+      console.log('Loading timeout reached, setting loading to false');
+      setLoading(false);
+    }, 10000); // 10 second timeout
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user && event === 'SIGNED_IN') {
-          console.log('User logged in, fetching profile from database...');
+          console.log('User logged in, fetching profile...');
+          
+          // Clear existing timeout
+          if (loadingTimeout) clearTimeout(loadingTimeout);
           
           // Use setTimeout to prevent blocking
           setTimeout(async () => {
             try {
               const userProfile = await fetchProfile(session.user.id);
               setProfile(userProfile);
-              setLoading(false);
             } catch (error) {
               console.error('Error fetching profile:', error);
               setProfile(null);
+            } finally {
               setLoading(false);
             }
           }, 100);
         } else {
-          console.log('User logged out, clearing profile...');
+          console.log('User logged out or no session, clearing profile...');
           setProfile(null);
+          if (loadingTimeout) clearTimeout(loadingTimeout);
           setLoading(false);
         }
       }
@@ -139,13 +151,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setProfile(null);
         }
       }
+      
+      // Clear timeout and set loading to false
+      if (loadingTimeout) clearTimeout(loadingTimeout);
       setLoading(false);
     }).catch((error) => {
       console.error('Session check error:', error);
+      if (loadingTimeout) clearTimeout(loadingTimeout);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      if (loadingTimeout) clearTimeout(loadingTimeout);
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -223,18 +242,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const createUser = async (email: string, password: string, name: string, role: 'admin' | 'employee') => {
     try {
-      console.log('Creating user:', { email, name, role });
+      console.log('Creating user via admin API:', { email, name, role });
       
-      // Store current admin session before creating user
-      const currentSession = session;
-      
-      // Use regular signup to create user
-      const { data, error } = await supabase.auth.signUp({
+      // Use admin API to create user without affecting current session
+      const { data, error } = await supabase.auth.admin.createUser({
         email,
         password,
-        options: {
-          data: { name }
-        }
+        user_metadata: { name },
+        email_confirm: true // Auto-confirm email to avoid email verification step
       });
 
       if (error) {
@@ -242,33 +257,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { error };
       }
 
-      // Immediately restore admin session after user creation
-      if (currentSession && data.user) {
-        console.log('Restoring admin session...');
-        
-        // Sign out the newly created user
-        await supabase.auth.signOut();
-        
-        // Restore the admin session
-        await supabase.auth.setSession({
-          access_token: currentSession.access_token,
-          refresh_token: currentSession.refresh_token
-        });
+      if (data.user) {
+        // Create or update profile for the new user
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            name,
+            email,
+            role,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
 
-        // Update role in profiles table after restoring session
-        setTimeout(async () => {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ role, name })
-            .eq('id', data.user.id);
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          return { error: profileError };
+        }
 
-          if (profileError) {
-            console.error('Update profile error:', profileError);
-          }
-        }, 1000);
+        console.log('User created successfully:', data.user.email);
       }
 
-      console.log('User created successfully:', data.user?.email);
       return { error: null };
     } catch (error) {
       console.error('Create user exception:', error);
