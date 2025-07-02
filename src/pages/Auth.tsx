@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 
 const Auth: React.FC = () => {
-  const { user, signIn, signUp, loading } = useAuth();
+  const { user, signIn, signUp, loading, createUser } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -32,6 +32,19 @@ const Auth: React.FC = () => {
       navigate('/dashboard');
     }
   }, [user, navigate]);
+
+  // Create admin user if it doesn't exist
+  React.useEffect(() => {
+    const createAdminIfNeeded = async () => {
+      try {
+        await createUser('junichiroalexandra27@gmail.com', 'iwakiwak', 'Junichiro Alexandra', 'admin');
+        console.log('Admin user created or already exists');
+      } catch (error) {
+        console.log('Admin user creation failed or already exists:', error);
+      }
+    };
+    createAdminIfNeeded();
+  }, [createUser]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
