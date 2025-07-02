@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import AdminSidebar from './AdminSidebar';
 import EmployeeTopbar from './EmployeeTopbar';
 
@@ -9,13 +9,13 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { currentUser } = useApp();
+  const { profile } = useAuth();
 
-  if (!currentUser) {
+  if (!profile) {
     return <>{children}</>;
   }
 
-  if (currentUser.role === 'admin') {
+  if (profile.role === 'admin') {
     return (
       <div className="flex min-h-screen bg-gray-50">
         <AdminSidebar />
