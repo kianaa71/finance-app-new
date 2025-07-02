@@ -223,20 +223,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Signing out user...');
       
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('Sign out error:', error);
-        throw error;
-      }
-      
-      console.log('Sign out successful');
+      // Clear local state first
       setUser(null);
       setProfile(null);
       setSession(null);
+      
+      // Clear localStorage manually
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      // Try to sign out, but don't throw error if session is missing
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (signOutError) {
+        console.log('Sign out error (ignored):', signOutError);
+        // Ignore errors, as we've already cleared local state
+      }
+      
+      console.log('Sign out completed');
     } catch (error) {
       console.error('Sign out exception:', error);
-      throw error;
+      // Even if there's an error, clear the local state
+      setUser(null);
+      setProfile(null);
+      setSession(null);
     }
   };
 
