@@ -3,9 +3,12 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useUserAvatar } from '@/hooks/useUserAvatar';
 
 const EmployeeTopbar: React.FC = () => {
   const { profile, signOut } = useAuth();
+  const { avatarUrl } = useUserAvatar(profile?.id);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -47,11 +50,12 @@ const EmployeeTopbar: React.FC = () => {
 
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                <span className="text-green-600 font-semibold text-sm">
+              <Avatar className="w-8 h-8">
+                <AvatarImage src={avatarUrl || undefined} alt={profile?.name} />
+                <AvatarFallback className="bg-green-100 text-green-600 font-semibold text-sm">
                   {profile?.name.charAt(0)}
-                </span>
-              </div>
+                </AvatarFallback>
+              </Avatar>
               <div className="hidden sm:block">
                 <p className="text-sm font-medium text-gray-800">{profile?.name}</p>
                 <p className="text-xs text-gray-500">Karyawan</p>

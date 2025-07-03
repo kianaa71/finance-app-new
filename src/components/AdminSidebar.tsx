@@ -3,9 +3,12 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useUserAvatar } from '@/hooks/useUserAvatar';
 
 const AdminSidebar: React.FC = () => {
   const { profile, signOut } = useAuth();
+  const { avatarUrl } = useUserAvatar(profile?.id);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -32,15 +35,16 @@ const AdminSidebar: React.FC = () => {
 
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-            <span className="text-blue-600 font-semibold">
+          <Avatar className="w-10 h-10">
+            <AvatarImage src={avatarUrl || undefined} alt={profile?.name} />
+            <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
               {profile?.name.charAt(0)}
-            </span>
-          </div>
+            </AvatarFallback>
+          </Avatar>
           <div>
             <p className="font-medium text-gray-800">{profile?.name}</p>
             <p className="text-xs text-gray-500 bg-blue-100 px-2 py-1 rounded">
-              Administrator
+              {profile?.role === 'admin' ? 'Administrator' : 'Karyawan'}
             </p>
           </div>
         </div>
