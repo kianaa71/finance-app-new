@@ -358,6 +358,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
+        .neq('status', 'inactive') // Filter out inactive users
         .order('created_at', { ascending: false });
 
       if (error) {
