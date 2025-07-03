@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 interface Transaction {
   id: string;
@@ -149,7 +151,169 @@ const Reports: React.FC = () => {
   const monthlyData = getMonthlyData();
 
   const handleExportPDF = () => {
-    alert('Fitur export PDF akan segera tersedia!');
+    const doc = new jsPDF();
+    const currentDate = new Date().toLocaleDateString('id-ID', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('LAPORAN KEUANGAN', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('FinanceApp - Sistem Keuangan', 105, 30, { align: 'center' });
+    doc.text(`Tanggal Cetak: ${currentDate}`, 105, 40, { align: 'center' });
+    
+    const periodText = filterPeriod === 'weekly' ? 'Mingguan' : 
+                      filterPeriod === 'monthly' ? 'Bulanan' : 'Keseluruhan';
+    doc.text(`Periode: ${periodText}`, 105, 50, { align: 'center' });
+    
+    // Line separator
+    doc.setLineWidth(0.5);
+    doc.line(20, 55, 190, 55);
+    
+    let yPosition = 70;
+    
+    // Summary Section
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RINGKASAN KEUANGAN', 20, yPosition);
+    yPosition += 15;
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    
+    const summaryData = [
+      ['Total Pemasukan', formatCurrency(summary.income)],
+      ['Total Pengeluaran', formatCurrency(summary.expense)],
+      ['Keuntungan Bersih', formatCurrency(summary.net)],
+      ['Jumlah Transaksi', summary.count.toString()]
+    ];
+    
+    (doc as any).autoTable({
+      startY: yPosition,
+      head: [['Kategori', 'Nilai']],
+      body: summaryData,
+      theme: 'striped',
+      headStyles: { 
+        fillColor: [59, 130, 246],
+        textColor: 255,
+        fontSize: 10,
+        fontStyle: 'bold'
+      },
+      bodyStyles: { fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 80 },
+        1: { cellWidth: 80, halign: 'right' }
+      }
+    });
+    
+    yPosition = (doc as any).lastAutoTable.finalY + 20;
+    
+    // Monthly Data Section
+    if (monthlyData.length > 0) {
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TREN BULANAN (6 BULAN TERAKHIR)', 20, yPosition);
+      yPosition += 10;
+      
+      const monthlyTableData = monthlyData.map(item => [
+        item.month,
+        formatCurrency(item.income),
+        formatCurrency(item.expense),
+        formatCurrency(item.income - item.expense)
+      ]);
+      
+      (doc as any).autoTable({
+        startY: yPosition,
+        head: [['Bulan', 'Pemasukan', 'Pengeluaran', 'Selisih']],
+        body: monthlyTableData,
+        theme: 'striped',
+        headStyles: { 
+          fillColor: [16, 185, 129],
+          textColor: 255,
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        bodyStyles: { fontSize: 9 },
+        columnStyles: {
+          1: { halign: 'right' },
+          2: { halign: 'right' },
+          3: { halign: 'right' }
+        }
+      });
+      
+      yPosition = (doc as any).lastAutoTable.finalY + 20;
+    }
+    
+    // Category Breakdown Section
+    if (categoryData.length > 0) {
+      // Check if we need a new page
+      if (yPosition > 220) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RINGKASAN PER KATEGORI', 20, yPosition);
+      yPosition += 10;
+      
+      const categoryTableData = categoryData.map((item: any) => {
+        const transactionCount = transactions.filter(t => {
+          const transactionCategory = categories.find(c => c.id === t.category_id);
+          return transactionCategory?.name === item.category;
+        }).length;
+        const average = transactionCount > 0 ? item.amount / transactionCount : 0;
+        
+        return [
+          item.category,
+          item.type === 'income' ? 'Pemasukan' : 'Pengeluaran',
+          formatCurrency(item.amount),
+          transactionCount.toString(),
+          formatCurrency(average)
+        ];
+      });
+      
+      (doc as any).autoTable({
+        startY: yPosition,
+        head: [['Kategori', 'Jenis', 'Total Nominal', 'Jumlah Transaksi', 'Rata-rata']],
+        body: categoryTableData,
+        theme: 'striped',
+        headStyles: { 
+          fillColor: [139, 92, 246],
+          textColor: 255,
+          fontSize: 9,
+          fontStyle: 'bold'
+        },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: {
+          0: { cellWidth: 35 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 40, halign: 'right' },
+          3: { cellWidth: 20, halign: 'center' },
+          4: { cellWidth: 40, halign: 'right' }
+        }
+      });
+    }
+    
+    // Footer
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Halaman ${i} dari ${pageCount}`, 105, 285, { align: 'center' });
+      doc.text('Laporan ini dibuat secara otomatis oleh FinanceApp', 105, 290, { align: 'center' });
+    }
+    
+    // Save the PDF
+    const fileName = `Laporan_Keuangan_${periodText}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
   };
 
   const handleExportExcel = () => {
