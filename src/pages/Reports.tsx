@@ -198,17 +198,26 @@ const Reports: React.FC = () => {
       startY: yPosition,
       head: [['Kategori', 'Nilai']],
       body: summaryData,
-      theme: 'striped',
+      theme: 'grid',
+      margin: { left: 45 }, // Center the table
+      tableWidth: 120,
       headStyles: { 
-        fillColor: [59, 130, 246],
-        textColor: 255,
-        fontSize: 10,
-        fontStyle: 'bold'
+        fillColor: [16, 185, 129], // Green
+        textColor: [255, 255, 255],
+        fontSize: 11,
+        fontStyle: 'bold',
+        halign: 'center'
       },
-      bodyStyles: { fontSize: 9 },
+      bodyStyles: { 
+        fontSize: 10,
+        textColor: [31, 41, 55] // Dark gray
+      },
+      alternateRowStyles: {
+        fillColor: [243, 244, 246] // Light gray
+      },
       columnStyles: {
-        0: { cellWidth: 80 },
-        1: { cellWidth: 80, halign: 'right' }
+        0: { cellWidth: 60, halign: 'center' },
+        1: { cellWidth: 60, halign: 'center' }
       }
     });
     
@@ -232,18 +241,28 @@ const Reports: React.FC = () => {
         startY: yPosition,
         head: [['Bulan', 'Pemasukan', 'Pengeluaran', 'Selisih']],
         body: monthlyTableData,
-        theme: 'striped',
+        theme: 'grid',
+        margin: { left: 25 }, // Center the table
+        tableWidth: 160,
         headStyles: { 
-          fillColor: [16, 185, 129],
-          textColor: 255,
-          fontSize: 10,
-          fontStyle: 'bold'
+          fillColor: [59, 130, 246], // Blue
+          textColor: [255, 255, 255],
+          fontSize: 11,
+          fontStyle: 'bold',
+          halign: 'center'
         },
-        bodyStyles: { fontSize: 9 },
+        bodyStyles: { 
+          fontSize: 10,
+          textColor: [31, 41, 55]
+        },
+        alternateRowStyles: {
+          fillColor: [239, 246, 255] // Light blue
+        },
         columnStyles: {
-          1: { halign: 'right' },
-          2: { halign: 'right' },
-          3: { halign: 'right' }
+          0: { cellWidth: 30, halign: 'center' },
+          1: { cellWidth: 45, halign: 'center' },
+          2: { cellWidth: 45, halign: 'center' },
+          3: { cellWidth: 40, halign: 'center' }
         }
       });
       
@@ -283,20 +302,29 @@ const Reports: React.FC = () => {
         startY: yPosition,
         head: [['Kategori', 'Jenis', 'Total Nominal', 'Jumlah Transaksi', 'Rata-rata']],
         body: categoryTableData,
-        theme: 'striped',
+        theme: 'grid',
+        margin: { left: 10 }, // Center the table
+        tableWidth: 190,
         headStyles: { 
-          fillColor: [139, 92, 246],
-          textColor: 255,
-          fontSize: 9,
-          fontStyle: 'bold'
+          fillColor: [139, 92, 246], // Purple
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold',
+          halign: 'center'
         },
-        bodyStyles: { fontSize: 8 },
+        bodyStyles: { 
+          fontSize: 9,
+          textColor: [31, 41, 55]
+        },
+        alternateRowStyles: {
+          fillColor: [250, 245, 255] // Light purple
+        },
         columnStyles: {
-          0: { cellWidth: 35 },
-          1: { cellWidth: 25 },
-          2: { cellWidth: 40, halign: 'right' },
-          3: { cellWidth: 20, halign: 'center' },
-          4: { cellWidth: 40, halign: 'right' }
+          0: { cellWidth: 40, halign: 'center' },
+          1: { cellWidth: 30, halign: 'center' },
+          2: { cellWidth: 45, halign: 'center' },
+          3: { cellWidth: 30, halign: 'center' },
+          4: { cellWidth: 45, halign: 'center' }
         }
       });
     }
