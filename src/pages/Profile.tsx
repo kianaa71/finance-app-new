@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -6,13 +6,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { Camera, Upload } from 'lucide-react';
 
 const Profile: React.FC = () => {
   const { profile, updateUser } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: profile?.name || '',
     email: profile?.email || '',
@@ -20,6 +25,107 @@ const Profile: React.FC = () => {
     newPassword: '',
     confirmPassword: ''
   });
+
+  // Load existing avatar on mount
+  React.useEffect(() => {
+    if (profile?.id) {
+      loadAvatar();
+    }
+  }, [profile?.id]);
+
+  const loadAvatar = async () => {
+    if (!profile?.id) return;
+    
+    try {
+      const { data } = await supabase.storage
+        .from('avatars')
+        .list(profile.id, { limit: 1 });
+        
+      if (data && data.length > 0) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(`${profile.id}/${data[0].name}`);
+        setAvatarUrl(publicUrl);
+      }
+    } catch (error) {
+      console.error('Error loading avatar:', error);
+    }
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !profile?.id) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Error",
+        description: "File harus berupa gambar",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Error", 
+        description: "Ukuran file maksimal 2MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      // Delete existing avatar if any
+      const { data: existingFiles } = await supabase.storage
+        .from('avatars')
+        .list(profile.id);
+        
+      if (existingFiles && existingFiles.length > 0) {
+        const filesToDelete = existingFiles.map(f => `${profile.id}/${f.name}`);
+        await supabase.storage.from('avatars').remove(filesToDelete);
+      }
+
+      // Upload new avatar
+      const fileExt = file.name.split('.').pop();
+      const fileName = `avatar.${fileExt}`;
+      const filePath = `${profile.id}/${fileName}`;
+
+      const { error } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (error) {
+        throw error;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      setAvatarUrl(publicUrl);
+      toast({
+        title: "Berhasil",
+        description: "Foto profil berhasil diperbarui",
+      });
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Gagal mengupload foto profil",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingAvatar(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -225,15 +331,41 @@ const Profile: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl ${
-                    profile?.role === 'admin' ? 'bg-blue-500' : 'bg-green-500'
-                  }`}>
-                    {profile?.name.charAt(0)}
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="relative">
+                    <Avatar className="w-20 h-20">
+                      <AvatarImage src={avatarUrl || undefined} alt={profile?.name} />
+                      <AvatarFallback className={`text-white font-bold text-xl ${
+                        profile?.role === 'admin' ? 'bg-blue-500' : 'bg-green-500'
+                      }`}>
+                        {profile?.name.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingAvatar}
+                    >
+                      {uploadingAvatar ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
                   </div>
-                  <div>
+                  <div className="text-center">
                     <p className="font-semibold text-lg">{profile?.name}</p>
                     <p className="text-gray-600">{profile?.email}</p>
+                    <p className="text-xs text-gray-500 mt-1">Klik ikon kamera untuk mengubah foto</p>
                   </div>
                 </div>
                 
