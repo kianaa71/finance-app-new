@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 interface Transaction {
   id: string;
@@ -194,7 +194,7 @@ const Reports: React.FC = () => {
       ['Jumlah Transaksi', summary.count.toString()]
     ];
     
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: yPosition,
       head: [['Kategori', 'Nilai']],
       body: summaryData,
@@ -212,7 +212,7 @@ const Reports: React.FC = () => {
       }
     });
     
-    yPosition = (doc as any).lastAutoTable.finalY + 20;
+    yPosition += summaryData.length * 12 + 40; // Estimate table height
     
     // Monthly Data Section
     if (monthlyData.length > 0) {
@@ -228,7 +228,7 @@ const Reports: React.FC = () => {
         formatCurrency(item.income - item.expense)
       ]);
       
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: yPosition,
         head: [['Bulan', 'Pemasukan', 'Pengeluaran', 'Selisih']],
         body: monthlyTableData,
@@ -247,7 +247,7 @@ const Reports: React.FC = () => {
         }
       });
       
-      yPosition = (doc as any).lastAutoTable.finalY + 20;
+      yPosition += monthlyTableData.length * 12 + 40; // Estimate table height
     }
     
     // Category Breakdown Section
@@ -279,7 +279,7 @@ const Reports: React.FC = () => {
         ];
       });
       
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: yPosition,
         head: [['Kategori', 'Jenis', 'Total Nominal', 'Jumlah Transaksi', 'Rata-rata']],
         body: categoryTableData,
