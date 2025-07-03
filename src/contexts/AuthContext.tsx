@@ -95,6 +95,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('Setting up auth state listener...');
     
     let loadingTimeout: NodeJS.Timeout;
+    let isInitialized = false;
     
     // Set loading timeout as fallback
     loadingTimeout = setTimeout(() => {
@@ -102,33 +103,59 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLoading(false);
     }, 10000); // 10 second timeout
     
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+    // Check for existing session first
+    const initializeAuth = async () => {
+      console.log('Checking for existing session...');
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Existing session:', session?.user?.email);
+        
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user && event === 'SIGNED_IN') {
+        if (session?.user) {
+          const userProfile = await fetchProfile(session.user.id);
+          setProfile(userProfile);
+        }
+        
+        isInitialized = true;
+        if (loadingTimeout) clearTimeout(loadingTimeout);
+        setLoading(false);
+      } catch (error) {
+        console.error('Session check error:', error);
+        if (loadingTimeout) clearTimeout(loadingTimeout);
+        setLoading(false);
+      }
+    };
+    
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
+        
+        // Skip initial session event to prevent duplicate calls
+        if (event === 'INITIAL_SESSION' && !isInitialized) {
+          return;
+        }
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
           console.log('User logged in, fetching profile...');
           
-          // Clear existing timeout
-          if (loadingTimeout) clearTimeout(loadingTimeout);
+          try {
+            const userProfile = await fetchProfile(session.user.id);
+            setProfile(userProfile);
+          } catch (error) {
+            console.error('Error fetching profile:', error);
+            setProfile(null);
+          }
           
-          // Use setTimeout to prevent blocking
-          setTimeout(async () => {
-            try {
-              const userProfile = await fetchProfile(session.user.id);
-              setProfile(userProfile);
-            } catch (error) {
-              console.error('Error fetching profile:', error);
-              setProfile(null);
-            } finally {
-              setLoading(false);
-            }
-          }, 100);
-        } else {
-          console.log('User logged out or no session, clearing profile...');
+          if (loadingTimeout) clearTimeout(loadingTimeout);
+          setLoading(false);
+        } else if (event === 'SIGNED_OUT') {
+          console.log('User logged out, clearing profile...');
           setProfile(null);
           if (loadingTimeout) clearTimeout(loadingTimeout);
           setLoading(false);
@@ -136,31 +163,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     );
 
-    // Check for existing session
-    console.log('Checking for existing session...');
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('Existing session:', session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        try {
-          const userProfile = await fetchProfile(session.user.id);
-          setProfile(userProfile);
-        } catch (error) {
-          console.error('Error fetching profile:', error);
-          setProfile(null);
-        }
-      }
-      
-      // Clear timeout and set loading to false
-      if (loadingTimeout) clearTimeout(loadingTimeout);
-      setLoading(false);
-    }).catch((error) => {
-      console.error('Session check error:', error);
-      if (loadingTimeout) clearTimeout(loadingTimeout);
-      setLoading(false);
-    });
+    // Initialize auth state
+    initializeAuth();
 
     return () => {
       subscription.unsubscribe();
