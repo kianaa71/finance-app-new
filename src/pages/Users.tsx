@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { UserAvatar } from '@/components/UserAvatar';
 
 interface Profile {
   id: string;
@@ -364,19 +365,21 @@ const Users: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {users.map((user) => (
           <Card key={user.id}>
-            <CardHeader>
-              <div className="flex items-center space-x-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${
-                  user.role === 'admin' ? 'bg-blue-500' : 'bg-green-500'
-                }`}>
-                  {user.name.charAt(0)}
-                </div>
-                <div className="flex-1">
-                  <CardTitle className="text-lg">{user.name}</CardTitle>
-                  <CardDescription>{user.email}</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
+             <CardHeader>
+               <div className="flex items-center space-x-4">
+                 <UserAvatar 
+                   userId={user.id}
+                   userName={user.name}
+                   role={user.role}
+                   size="lg"
+                   showName={false}
+                 />
+                 <div className="flex-1">
+                   <CardTitle className="text-lg">{user.name}</CardTitle>
+                   <CardDescription>{user.email}</CardDescription>
+                 </div>
+               </div>
+             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">

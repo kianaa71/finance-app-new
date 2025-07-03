@@ -9,7 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { useUserAvatar } from '@/hooks/useUserAvatar';
+import { UserAvatar } from '@/components/UserAvatar';
 
 interface Transaction {
   id: string;
@@ -387,14 +390,14 @@ const Transactions: React.FC = () => {
                           {getCategoryName(transaction.category_id)}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-600">
-                            {getUserName(transaction.user_id).charAt(0)}
-                          </div>
-                          <span className="text-sm">{getUserName(transaction.user_id)}</span>
-                        </div>
-                      </td>
+                       <td className="py-3 px-4">
+                         <UserAvatar 
+                           userId={transaction.user_id}
+                           userName={getUserName(transaction.user_id)}
+                           role={profiles.find(p => p.id === transaction.user_id)?.role}
+                           size="sm"
+                         />
+                       </td>
                       <td className="py-3 px-4">
                         {canEditTransaction(transaction) ? (
                           <div className="flex space-x-2">
