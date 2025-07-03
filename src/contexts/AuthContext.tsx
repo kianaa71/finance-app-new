@@ -96,26 +96,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (!mounted) return;
+        
+        console.log('Auth state change:', event, session?.user?.email);
         
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
-          try {
-            const userProfile = await fetchProfile(session.user.id);
-            if (mounted) {
-              setProfile(userProfile);
-              setLoading(false);
+          // Use setTimeout to avoid deadlock
+          setTimeout(async () => {
+            if (!mounted) return;
+            try {
+              const userProfile = await fetchProfile(session.user.id);
+              if (mounted) {
+                setProfile(userProfile);
+                setLoading(false);
+              }
+            } catch (error) {
+              console.error('Error fetching profile:', error);
+              if (mounted) {
+                setProfile(null);
+                setLoading(false);
+              }
             }
-          } catch (error) {
-            console.error('Error fetching profile:', error);
-            if (mounted) {
-              setProfile(null);
-              setLoading(false);
-            }
-          }
+          }, 0);
         } else {
           if (mounted) {
             setProfile(null);
@@ -126,23 +132,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
+      
+      console.log('Initial session check:', session?.user?.email);
       
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        try {
-          const userProfile = await fetchProfile(session.user.id);
-          if (mounted) setProfile(userProfile);
-        } catch (error) {
-          console.error('Error fetching profile:', error);
-          if (mounted) setProfile(null);
-        }
+        // Use setTimeout to avoid deadlock  
+        setTimeout(async () => {
+          if (!mounted) return;
+          try {
+            const userProfile = await fetchProfile(session.user.id);
+            if (mounted) setProfile(userProfile);
+          } catch (error) {
+            console.error('Error fetching profile:', error);
+            if (mounted) setProfile(null);
+          }
+          if (mounted) setLoading(false);
+        }, 0);
+      } else {
+        if (mounted) setLoading(false);
       }
-      
-      if (mounted) setLoading(false);
     }).catch((error) => {
       console.error('Session check error:', error);
       if (mounted) setLoading(false);
