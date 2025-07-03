@@ -234,7 +234,7 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Arus Kas Mingguan</CardTitle>
+            <CardTitle>Arus Keuangan Mingguan</CardTitle>
             <CardDescription>
               Perbandingan pemasukan dan pengeluaran per hari
             </CardDescription>
