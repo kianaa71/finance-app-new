@@ -416,9 +416,10 @@ const Users: React.FC = () => {
                       </Button>
                        <Button 
                         size="sm" 
-                        variant="destructive" 
+                        variant={user.status === 'inactive' ? 'outline' : 'destructive'}
                         className="flex-1"
                         onClick={() => handleDeleteUser(user.id)}
+                        disabled={user.status === 'inactive'}
                       >
                         {user.status === 'inactive' ? 'Nonaktif' : 'Nonaktifkan'}
                       </Button>
