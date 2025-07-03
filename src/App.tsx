@@ -12,6 +12,7 @@ import Transactions from "./pages/Transactions";
 import Reports from "./pages/Reports";
 import Profile from "./pages/Profile";
 import Users from "./pages/Users";
+import Categories from "./pages/Categories";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -95,6 +96,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Users />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/categories" 
+        element={
+          <ProtectedRoute>
+            <Categories />
           </ProtectedRoute>
         } 
       />

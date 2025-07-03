@@ -12,6 +12,7 @@ const AdminSidebar: React.FC = () => {
   const menuItems = [
     { path: '/dashboard', label: 'Dashboard', icon: '📊' },
     { path: '/transactions', label: 'Transaksi', icon: '💰' },
+    { path: '/categories', label: 'Kategori', icon: '📂' },
     { path: '/reports', label: 'Laporan', icon: '📈' },
     { path: '/users', label: 'Pengguna', icon: '👥' },
     { path: '/profile', label: 'Profil', icon: '⚙️' },
