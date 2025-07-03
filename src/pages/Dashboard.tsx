@@ -104,16 +104,41 @@ const Dashboard: React.FC = () => {
   const monthlyNetIncome = monthlyIncome - monthlyExpense;
   const allTimeProfit = totalIncome - totalExpense;
 
-  // Data untuk grafik mingguan (sample data)
-  const weeklyData = [
-    { name: 'Sen', income: 500000, expense: 300000 },
-    { name: 'Sel', income: 800000, expense: 450000 },
-    { name: 'Rab', income: 1200000, expense: 600000 },
-    { name: 'Kam', income: 950000, expense: 380000 },
-    { name: 'Jum', income: 1100000, expense: 520000 },
-    { name: 'Sab', income: 700000, expense: 250000 },
-    { name: 'Min', income: 400000, expense: 150000 },
-  ];
+  // Data untuk grafik mingguan (dari data real)
+  const getWeeklyData = () => {
+    const now = new Date();
+    const currentWeek = [];
+    
+    // Dapatkan 7 hari terakhir
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      
+      const dayName = date.toLocaleDateString('id-ID', { weekday: 'short' });
+      const dayTransactions = transactions.filter(t => {
+        const transactionDate = new Date(t.date);
+        return transactionDate.toDateString() === date.toDateString();
+      });
+      
+      const dayIncome = dayTransactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+        
+      const dayExpense = dayTransactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+      
+      currentWeek.push({
+        name: dayName,
+        income: dayIncome,
+        expense: dayExpense
+      });
+    }
+    
+    return currentWeek;
+  };
+
+  const weeklyData = getWeeklyData();
 
   // Transaksi terbaru (5 terakhir)
   const recentTransactions = transactions.slice(0, 5);
