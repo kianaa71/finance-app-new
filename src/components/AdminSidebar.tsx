@@ -50,15 +50,15 @@ const AdminSidebar: React.FC = () => {
       </div>
       
       <Sidebar className="border-r border-border">
-        <SidebarHeader className="border-b border-border">
-          <div className="flex items-center gap-2 px-2 py-1">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <BarChart3 className="h-4 w-4" />
+        <SidebarHeader className="border-b border-border p-4">
+          <div className="flex items-center gap-3 px-2 py-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <BarChart3 className="h-5 w-5" />
             </div>
             {state === 'expanded' && (
               <div>
-                <p className="text-sm font-semibold">FinanceApp</p>
-                <p className="text-xs text-muted-foreground">Sistem Keuangan</p>
+                <p className="text-lg font-bold">FinanceApp</p>
+                <p className="text-sm text-muted-foreground">Sistem Keuangan</p>
               </div>
             )}
           </div>
@@ -68,17 +68,17 @@ const AdminSidebar: React.FC = () => {
           {/* User Profile */}
           <SidebarGroup>
             <SidebarGroupContent>
-              <div className="flex items-center gap-3 px-2 py-2">
-                <Avatar className="h-8 w-8">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+                <Avatar className="h-10 w-10">
                   <AvatarImage src={avatarUrl || undefined} alt={profile?.name} />
-                  <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                     {profile?.name.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 {state === 'expanded' && (
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{profile?.name}</p>
-                    <p className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-md inline-block">
+                    <p className="font-semibold truncate">{profile?.name}</p>
+                    <p className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-md inline-block mt-1">
                       Administrator
                     </p>
                   </div>
@@ -89,22 +89,26 @@ const AdminSidebar: React.FC = () => {
 
           {/* Navigation */}
           <SidebarGroup>
-            <SidebarGroupLabel>Menu</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-sm font-semibold px-4 py-2">Menu</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="px-2">
                 {menuItems.map((item) => (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       asChild
                       isActive={location.pathname === item.path}
                       tooltip={state === 'collapsed' ? item.label : undefined}
+                      size="lg"
+                      className="h-12 px-4 py-3"
                     >
                       <button
                         onClick={() => navigate(item.path)}
-                        className="flex items-center gap-3 w-full"
+                        className="flex items-center gap-4 w-full text-left"
                       >
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.label}</span>
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
+                        {state === 'expanded' && (
+                          <span className="font-medium text-sm">{item.label}</span>
+                        )}
                       </button>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -114,19 +118,23 @@ const AdminSidebar: React.FC = () => {
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="border-t border-border">
+        <SidebarFooter className="border-t border-border p-2">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
                 tooltip={state === 'collapsed' ? 'Keluar' : undefined}
+                size="lg"
+                className="h-12 px-4 py-3"
               >
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-3 w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                  className="flex items-center gap-4 w-full text-left text-destructive hover:text-destructive hover:bg-destructive/10"
                 >
-                  <LogOut className="h-4 w-4" />
-                  <span>Keluar</span>
+                  <LogOut className="h-5 w-5 flex-shrink-0" />
+                  {state === 'expanded' && (
+                    <span className="font-medium text-sm">Keluar</span>
+                  )}
                 </button>
               </SidebarMenuButton>
             </SidebarMenuItem>
