@@ -37,18 +37,37 @@ const Profile: React.FC = () => {
     if (!profile?.id) return;
     
     try {
-      const { data } = await supabase.storage
+      console.log('Profile: Loading avatar for user:', profile.id);
+      
+      const { data, error } = await supabase.storage
         .from('avatars')
-        .list(profile.id, { limit: 1 });
+        .list(profile.id, { limit: 10 });
+        
+      console.log('Profile: Avatar files found:', data, 'Error:', error);
         
       if (data && data.length > 0) {
+        // Sort by updated_at to get the most recent file
+        const sortedFiles = data.sort((a, b) => 
+          new Date(b.updated_at || b.created_at).getTime() - 
+          new Date(a.updated_at || a.created_at).getTime()
+        );
+        
+        const filePath = `${profile.id}/${sortedFiles[0].name}`;
+        console.log('Profile: Getting public URL for:', filePath);
+        
         const { data: { publicUrl } } = supabase.storage
           .from('avatars')
-          .getPublicUrl(`${profile.id}/${data[0].name}`);
+          .getPublicUrl(filePath);
+          
+        console.log('Profile: Avatar public URL:', publicUrl);
         setAvatarUrl(publicUrl);
+      } else {
+        console.log('Profile: No avatar files found for user:', profile.id);
+        setAvatarUrl(null);
       }
     } catch (error) {
-      console.error('Error loading avatar:', error);
+      console.error('Profile: Error loading avatar:', error);
+      setAvatarUrl(null);
     }
   };
 
