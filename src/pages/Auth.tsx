@@ -178,9 +178,7 @@ const Auth: React.FC = () => {
 
       toast({
         title: "Berhasil",
-        description: selectedAvatar 
-          ? "Registrasi berhasil dengan foto profil! Silakan cek email untuk konfirmasi."
-          : "Registrasi berhasil! Silakan cek email untuk konfirmasi.",
+        description: "Registrasi berhasil! Silakan login dengan akun yang baru dibuat.",
       });
 
       // Reset form
@@ -194,6 +192,12 @@ const Auth: React.FC = () => {
       setAvatarPreview(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+      }
+
+      // Switch to login tab after successful registration
+      const loginTab = document.querySelector('[value="login"]') as HTMLElement;
+      if (loginTab) {
+        loginTab.click();
       }
     } catch (error: any) {
       toast({
