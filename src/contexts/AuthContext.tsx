@@ -19,7 +19,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, name: string) => Promise<{ error: any; userId?: string }>;
   signOut: () => Promise<void>;
   createUser: (email: string, password: string, name: string, role: 'admin' | 'employee') => Promise<{ error: any }>;
   updateUser: (userId: string, name: string, role: 'admin' | 'employee') => Promise<{ error: any }>;
@@ -194,13 +194,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Signing up user:', email, name);
       
-      const redirectUrl = `${window.location.origin}/dashboard`;
-      
+      // Remove emailRedirectTo to prevent auto-login
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: redirectUrl,
           data: {
             name: name
           }
@@ -212,8 +210,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { error };
       }
 
+      // Important: Do NOT sign in the user automatically
+      // They need to login manually after registration
+      
       console.log('Sign up successful:', data.user?.email);
-      return { error: null };
+      return { error: null, userId: data.user?.id };
     } catch (error) {
       console.error('Sign up exception:', error);
       return { error };

@@ -158,22 +158,20 @@ const Auth: React.FC = () => {
     }
 
     try {
-      const { error } = await signUp(signupData.email, signupData.password, signupData.name);
+      const result = await signUp(signupData.email, signupData.password, signupData.name);
       
-      if (error) {
+      if (result.error) {
         toast({
           title: "Error", 
-          description: error.message || "Registrasi gagal",
+          description: result.error.message || "Registrasi gagal",
           variant: "destructive"
         });
         return;
       }
 
-      // If there's an avatar selected, upload it
-      if (selectedAvatar) {
-        // Use a temporary user ID based on email for storage path during signup
-        const tempUserId = btoa(signupData.email).replace(/[^a-zA-Z0-9]/g, '');
-        await uploadAvatar(tempUserId);
+      // If there's an avatar selected and we got the user ID, upload it
+      if (selectedAvatar && result.userId) {
+        await uploadAvatar(result.userId);
       }
 
       toast({
