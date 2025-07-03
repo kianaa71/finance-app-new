@@ -92,79 +92,65 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
-    console.log('Setting up auth state listener...');
-    
-    let loadingTimeout: NodeJS.Timeout;
-    
-    // Set loading timeout as fallback
-    loadingTimeout = setTimeout(() => {
-      console.log('Loading timeout reached, setting loading to false');
-      setLoading(false);
-    }, 10000); // 10 second timeout
+    let mounted = true;
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+      async (event, session) => {
+        if (!mounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user && event === 'SIGNED_IN') {
-          console.log('User logged in, fetching profile...');
-          
-          // Clear existing timeout
-          if (loadingTimeout) clearTimeout(loadingTimeout);
-          
-          // Use setTimeout to prevent blocking
-          setTimeout(async () => {
-            try {
-              const userProfile = await fetchProfile(session.user.id);
+        if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+          try {
+            const userProfile = await fetchProfile(session.user.id);
+            if (mounted) {
               setProfile(userProfile);
-            } catch (error) {
-              console.error('Error fetching profile:', error);
-              setProfile(null);
-            } finally {
               setLoading(false);
             }
-          }, 100);
+          } catch (error) {
+            console.error('Error fetching profile:', error);
+            if (mounted) {
+              setProfile(null);
+              setLoading(false);
+            }
+          }
         } else {
-          console.log('User logged out or no session, clearing profile...');
-          setProfile(null);
-          if (loadingTimeout) clearTimeout(loadingTimeout);
-          setLoading(false);
+          if (mounted) {
+            setProfile(null);
+            setLoading(false);
+          }
         }
       }
     );
 
     // Check for existing session
-    console.log('Checking for existing session...');
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('Existing session:', session?.user?.email);
+      if (!mounted) return;
+      
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
         try {
           const userProfile = await fetchProfile(session.user.id);
-          setProfile(userProfile);
+          if (mounted) setProfile(userProfile);
         } catch (error) {
           console.error('Error fetching profile:', error);
-          setProfile(null);
+          if (mounted) setProfile(null);
         }
       }
       
-      // Clear timeout and set loading to false
-      if (loadingTimeout) clearTimeout(loadingTimeout);
-      setLoading(false);
+      if (mounted) setLoading(false);
     }).catch((error) => {
       console.error('Session check error:', error);
-      if (loadingTimeout) clearTimeout(loadingTimeout);
-      setLoading(false);
+      if (mounted) setLoading(false);
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
-      if (loadingTimeout) clearTimeout(loadingTimeout);
     };
   }, []);
 
@@ -192,9 +178,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signUp = async (email: string, password: string, name: string) => {
     try {
-      console.log('Signing up user:', email, name);
+      // Sign out first to ensure clean state
+      await supabase.auth.signOut();
       
-      // Remove emailRedirectTo to prevent auto-login
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -206,17 +192,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (error) {
-        console.error('Sign up error:', error);
         return { error };
       }
 
-      // Important: Do NOT sign in the user automatically
-      // They need to login manually after registration
+      // Force sign out after signup to prevent auto-login
+      await supabase.auth.signOut();
       
-      console.log('Sign up successful:', data.user?.email);
       return { error: null, userId: data.user?.id };
     } catch (error) {
-      console.error('Sign up exception:', error);
       return { error };
     }
   };
