@@ -2,7 +2,6 @@
 
 This project was created in **collaboration with [Lovable AI](https://lovable.dev/)** – an AI-powered development platform that enables building and editing web applications using natural language.
 
-## Project info
+## Project url
 
-**URL**: https://lovable.dev/projects/201e968f-5020-41c4-8eb3-a03822ee7995
-
+**URL**: https://finance-app-new.lovable.app/
