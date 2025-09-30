@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface Transaction {
   id: string;
@@ -345,7 +346,74 @@ const Reports: React.FC = () => {
   };
 
   const handleExportExcel = () => {
-    alert('Fitur export Excel akan segera tersedia!');
+    const periodText = filterPeriod === 'weekly' ? 'Mingguan' : 
+                      filterPeriod === 'monthly' ? 'Bulanan' : 'Keseluruhan';
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Sheet 1: Summary
+    const summaryData = [
+      ['LAPORAN KEUANGAN - FINANCEAPP'],
+      [`Periode: ${periodText}`],
+      [`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}`],
+      [],
+      ['RINGKASAN KEUANGAN'],
+      ['Kategori', 'Nilai'],
+      ['Total Pemasukan', formatCurrency(summary.income)],
+      ['Total Pengeluaran', formatCurrency(summary.expense)],
+      ['Keuntungan Bersih', formatCurrency(summary.net)],
+      ['Jumlah Transaksi', summary.count.toString()],
+    ];
+    const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, ws1, 'Ringkasan');
+    
+    // Sheet 2: Monthly Trend
+    if (monthlyData.length > 0) {
+      const monthlySheetData = [
+        ['TREN BULANAN (6 BULAN TERAKHIR)'],
+        [],
+        ['Bulan', 'Pemasukan', 'Pengeluaran', 'Selisih'],
+        ...monthlyData.map(item => [
+          item.month,
+          item.income,
+          item.expense,
+          item.income - item.expense
+        ])
+      ];
+      const ws2 = XLSX.utils.aoa_to_sheet(monthlySheetData);
+      XLSX.utils.book_append_sheet(wb, ws2, 'Tren Bulanan');
+    }
+    
+    // Sheet 3: Category Breakdown
+    if (categoryData.length > 0) {
+      const categorySheetData = [
+        ['RINGKASAN PER KATEGORI'],
+        [],
+        ['Kategori', 'Jenis', 'Total Nominal', 'Jumlah Transaksi', 'Rata-rata'],
+        ...categoryData.map((item: any) => {
+          const transactionCount = transactions.filter(t => {
+            const transactionCategory = categories.find(c => c.id === t.category_id);
+            return transactionCategory?.name === item.category;
+          }).length;
+          const average = transactionCount > 0 ? item.amount / transactionCount : 0;
+          
+          return [
+            item.category,
+            item.type === 'income' ? 'Pemasukan' : 'Pengeluaran',
+            item.amount,
+            transactionCount,
+            average
+          ];
+        })
+      ];
+      const ws3 = XLSX.utils.aoa_to_sheet(categorySheetData);
+      XLSX.utils.book_append_sheet(wb, ws3, 'Per Kategori');
+    }
+    
+    // Save file
+    const fileName = `Laporan_Keuangan_${periodText}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
   };
 
   if (loading) {
